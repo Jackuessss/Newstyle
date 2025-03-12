@@ -1,0 +1,276 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #686279;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    color: #85828D;
+}
+
+p {
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* Container Layout */
+.container {
+    display: flex;
+    background: #2B2637;
+    border-radius: 20px;
+    width: 80%;
+    height: 90%;
+    overflow: hidden;
+}
+
+/* Left Side Wrapper */
+.image-wrapper {
+    width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Left Side (Image Box) */
+.image-box {
+    background-image: url('/static/images/dune.jpg');
+    background-size: cover;
+    background-position: center;
+    width: 95%;
+    height: 95%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    border-radius: 15px;
+    position: relative;
+}
+
+/* Right Side (Signup Form) */
+.signup-form {
+    width: 40%;
+    padding: 40px;
+    background: #2B2637;
+    border-radius: 0 20px 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+/* Logo and Back Button */
+.logo {
+    width: 100px;
+    position: absolute;
+    top: 15px;
+    left: 15px;
+}
+
+.back-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: lighter;
+    border: 1px solid transparent;
+    transition: border 0.3s ease;
+}
+
+.back-btn:hover {
+    border: 1px solid white;
+    transition: border 0.3s ease;
+}
+
+/* Title */
+h1 {
+    color: white;
+    font-size: 47px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+h2 {
+    color: white;
+    font-size: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Input Fields */
+.input-group {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+input {
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 3px;
+    background: #3B364A;
+    color: white;
+    outline: none;
+    font-size: 15px;
+}
+
+input.full-width {
+    width: 94.5%;
+    height: 25px;
+}
+
+input.half-width {
+    width: 48%;
+    height: 25px;
+}
+
+input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+}
+
+input[type="checkbox"]:checked {
+    accent-color: white;
+}
+
+input[type="text"]:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+input[type="email"]:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+input[type="password"]:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+/* Terms & Conditions */
+.terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #bbb;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.terms input {
+    margin: 0;
+}
+
+.terms label {
+    font-size: 14px;
+}
+
+.terms a {
+    color: #A59EC1;
+    text-decoration: underline;
+}
+
+a{
+    color: #A59EC1;
+    text-decoration: underline;
+}
+
+/* Buttons */
+.create-btn {
+    width: 100%;
+    height: 46px;
+    padding: 12px;
+    background: #6955AF;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.create-btn:hover {
+    background: #4F3E9A;
+    transition: background-color 0.3s ease;
+}
+
+.google-btn,
+.apple-btn {
+    width: 48%;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px; /* Space between buttons */
+    background: transparent;
+    color: white;
+    border: 2px solid #a1a1a1; /* Set a consistent border width */
+    box-sizing: border-box; /* Include border and padding in the width/height */
+    transition: border 0.3s ease
+}
+
+.google-btn:hover,
+.apple-btn:hover {
+    border-color: white; /* Change the border color */
+}
+/* Divider Line */
+.divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.divider span {
+    flex: 1;
+    height: 1px;
+    background: #444;
+    margin: 0 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .image-wrapper {
+        width: 100%;
+        padding: 20px 0;
+    }
+
+    .signup-form {
+        width: 100%;
+        border-radius: 0 0 20px 20px;
+    }
+
+    input {
+        width: 100%;
+    }
+
+    .google-btn,
+    .apple-btn {
+        width: 48%;
+        margin-right: 10px;
+    }
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden; /* Prevents scrolling */
+}
