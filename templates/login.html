@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup Page</title>
+    <title>Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -12,34 +12,29 @@
         <div class="image-wrapper">
             <div class="image-box">
                 <img src="/static/images/whitenobg.png" class="logo">
-                <button class="back-btn">Back to website</button>
+                <button class="back-btn">Back to website </button>
                 <div class="image-content">
-                    <h2>Start your journey,<br> Join Penguin</h2>
+                    <h2>Welcome back<br></h2>
                 </div>
             </div>
         </div>
 
         <!-- Right Side (Signup Form) -->
         <div class="signup-form">
-            <h1>Create an account</h1>
-            <p class="login-text">Already have an account? <a href="#">Log in</a></p>
+            <h1>Login to your account</h1>
+            <p class="login-text">Don't have an account? <a href="/">Sign up</a></p>
             
             <form action="/signup" method="post">
-            <!-- Input fields -->
-            <div class="input-group">
-                <input type="text" placeholder="First name" name="first_name" class="half-width">
-                <input type="text" placeholder="Last name" name="last_name" class="half-width">
-            </div>
+            
             <input type="email" placeholder="Email" name="email" class="full-width">
             <input type="password" placeholder="Enter your password" name="password" class="full-width">
             
-            <!-- Terms -->
-            <div class="terms">
-            <button type="submit" class="create-btn">Create account</button>
+        
+            <button type="submit" class="create-btn">Login</button>
             </form>
             <div class="divider">
                 <span></span>
-                <p>Or register with</p>
+                <p>Or login with</p>
                 <span></span>
             </div>
 
