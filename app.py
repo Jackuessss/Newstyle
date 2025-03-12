@@ -44,7 +44,7 @@ def signup_user(email, password, first_name, last_name):
     cursor = conn.cursor()
 
 
-    cursor.execute('SELECT * FROM users WHERE email = ?', (email))
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
     existing_user = cursor.fetchone()
 
     if existing_user:
