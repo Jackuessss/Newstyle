@@ -113,13 +113,13 @@ def signup():
 def homepage():
     return render_template('homepage.html')
 
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
+@app.route('/resetpassword', methods=['GET', 'POST'])
+def resetpassword():
+    return render_template('resetpassword.html')
 
-@app.route('/contact')
-def contact():
-    return render_template('contact.html')
+@app.route('/forgotpasswordemail', methods=['GET', 'POST'])
+def forgotpasswordemail():
+    return render_template('forgotpasswordemail.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

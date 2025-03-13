@@ -22,7 +22,7 @@ p {
     background: #2B2637;
     border-radius: 20px;
     width: 80%;
-    height: 90%;
+    height: 92%;
     overflow: hidden;
 }
 
@@ -123,6 +123,7 @@ input {
     color: white;
     outline: none;
     font-size: 15px;
+    border: 1px solid transparent;
 }
 
 input.full-width {
@@ -149,12 +150,27 @@ input[type="text"]:focus {
     transition: border 0.3s ease;
 }
 
+input[type="text"]:hover {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
 input[type="email"]:focus {
     border: 1px solid #A59EC1;
     transition: border 0.3s ease;
 }
 
+input[type="email"]:hover {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
 input[type="password"]:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+input[type="password"]:hover {
     border: 1px solid #A59EC1;
     transition: border 0.3s ease;
 }
@@ -184,6 +200,12 @@ input[type="password"]:focus {
 
 a{
     color: #A59EC1;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #4F3E9A;
+    transition: color 0.3s ease;
     text-decoration: underline;
 }
 
@@ -240,6 +262,196 @@ a{
     height: 1px;
     background: #444;
     margin: 0 10px;
+}
+
+/* Align Remember Me and Forgot Password */
+.remember-forgot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.remember-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #85828D;
+}
+
+.forgot-link {
+    color: #A59EC1;
+    text-decoration: none;
+}
+
+.forgot-link:hover {
+    color: #4F3E9A;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+}
+
+/* Forgot Password Page */
+.forgot-container {
+    background: #2B2637;
+    border-radius: 20px;
+    padding: 40px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.forgot-container h1 {
+    font-size: 40px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.forgot-subtext {
+    font-size: 14px;
+    color: #A59EC1;
+    margin-bottom: 20px;
+}
+
+.forgot-input {
+    width: 94%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background: #3B364A;
+    color: white;
+    font-size: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    outline: none;
+}
+
+.forgot-input:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+.reset-btn {
+    width: 100%;
+    padding: 12px;
+    background: #6955AF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.reset-btn:hover {
+    background: #4F3E9A;
+}
+
+.back-to-login {
+    display: block;
+    margin-top: 20px;
+    color: #A59EC1;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.back-to-login:hover {
+    color: #4F3E9A;
+    text-decoration: underline;
+}
+
+/* Center the forgot-container */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    background-color: #686279;
+}
+
+/* Reset Password Page */
+.reset-container {
+    background: #2B2637;
+    border-radius: 20px;
+    padding: 40px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    color: white;
+}
+
+.reset-container h1 {
+    font-size: 40px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.reset-subtext {
+    font-size: 14px;
+    color: #A59EC1;
+    margin-bottom: 20px;
+}
+
+.reset-input {
+    width: 94%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background: #3B364A;
+    color: white;
+    font-size: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    outline: none;
+}
+
+.reset-input:focus {
+    border: 1px solid #A59EC1;
+    transition: border 0.3s ease;
+}
+
+.reset-btn {
+    width: 100%;
+    padding: 12px;
+    background: #6955AF;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.reset-btn:hover {
+    background: #4F3E9A;
+}
+
+.back-to-login {
+    display: block;
+    margin-top: 20px;
+    color: #A59EC1;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.back-to-login:hover {
+    color: #4F3E9A;
+    text-decoration: underline;
+}
+
+/* Center the reset-container */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    background-color: #686279;
 }
 
 /* Responsive Design */
