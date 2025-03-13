@@ -53,16 +53,16 @@ def signup_user(email, password, first_name, last_name):
     db.session.commit()
     return 'Signup successful! Please log in.'
 
-# Login user
 def login_user(email, password):
     user = User.query.filter_by(email=email).first()
     if user:
-        salted_password = password + user.id
+        salted_password = password + str(user.id)  # Make sure you convert user.id to string if it's an integer
         if check_password_hash(user.password_hash, salted_password):
             return 'Login successful!'
         else:
             return 'Invalid password.'
     return 'User not found.'
+
 
 # Generate reset code
 def generate_reset_code():
@@ -111,25 +111,31 @@ def signup():
         flash(message)
 
         if 'Signup successful!' in message:
-            return redirect(url_for('login'))
+            return redirect(url_for('dashboard'))
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+        # Safely get form data using .get() to avoid KeyError
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        if not email or not password:
+            flash("Email and password are required", "error")
+            return redirect(url_for('login'))
 
         message = login_user(email, password)
         flash(message)
 
         if 'Login successful!' in message:
-            return redirect(url_for('homepage'))
+            return redirect(url_for('dashboard'))
     return render_template('login.html')
 
-@app.route('/homepage')
-def homepage():
-    return render_template('homepage.html')
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
 
 if __name__ == '__main__':
     init_db()
