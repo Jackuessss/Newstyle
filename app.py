@@ -132,6 +132,62 @@ def login():
             return redirect(url_for('dashboard'))
     return render_template('login.html')
 
+@app.route('/forgotpasswordemail', methods=['GET', 'POST'])
+def forgotpasswordemail():
+    if request.method == 'POST':
+        email = request.form['email']
+
+        # Query the user by email using SQLAlchemy
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # Generate a unique reset code
+            reset_code = generate_reset_code()  # Assuming you have a function to generate this code
+            user.reset_code = reset_code  # Store the reset code in the user's record
+            db.session.commit()  # Commit changes to the database
+
+            # Send the reset email with the reset code
+            if send_reset_email(email, reset_code):  # Assuming you have a function for sending email
+                flash('Reset code sent to your email!', 'success')
+                return redirect(url_for('resetpassword'))  # Redirect to the reset password page
+            else:
+                flash('Failed to send email. Please try again later.', 'error')
+        else:
+            flash('Email not found!', 'error')
+
+    return render_template('forgotpasswordemail.html')
+
+@app.route('/resetpassword', methods=['GET', 'POST'])
+def resetpassword():
+    if request.method == 'POST':
+        reset_code = request.form['reset_code']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+
+        # Validate if the passwords match
+        if new_password != confirm_password:
+            flash('Passwords do not match!', 'error')
+            return redirect(url_for('resetpassword'))
+
+        # Query the user by reset code
+        user = User.query.filter_by(reset_code=reset_code).first()
+
+        if user:
+            # Hash the new password with the user's ID as salt
+            salted_password = new_password + str(user.id)  # Ensure user.id is a string
+            hashed_password = generate_password_hash(salted_password)
+
+            # Update the user's password and clear the reset code
+            user.password_hash = hashed_password
+            user.reset_code = None  # Clear the reset code once it's used
+            db.session.commit()  # Commit changes to the database
+
+            flash('Password reset successful! Please log in.', 'success')
+            return redirect(url_for('login'))  # Redirect the user to the login page
+        else:
+            flash('Invalid reset code.', 'error')
+
+    return render_template('resetpassword.html')
 
 @app.route('/dashboard')
 def dashboard():
