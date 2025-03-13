@@ -93,7 +93,7 @@ def generate_reset_code():
 
 # Send reset email via SparkPost with styled HTML
 def send_reset_email(email, reset_code):
-    reset_link = f"http://localhost:5000/resetpassword"  # Update this for production!
+    reset_link = f"https://penguintrader.co.uk/resetpassword"  # Update this for production!
 
     url = "https://api.sparkpost.com/api/v1/transmissions"
     headers = {
