@@ -31,7 +31,7 @@ class User(db.Model):
     last_name = db.Column(db.String, nullable=False)
     password_hash = db.Column(db.Text, nullable=False)
     reset_code = db.Column(db.String)
-    terms = db.Column(db.Boolean, nullable=False)  # Add this line
+    terms = db.Column(db.Boolean, nullable=False) 
 
 # Initialize the database
 def init_db():
@@ -52,7 +52,7 @@ def signup_user(email, password, first_name, last_name, terms):
         first_name=first_name,
         last_name=last_name,
         password_hash=hashed_password,
-        terms=terms  # Save the terms value
+        terms=terms 
     )
     
     db.session.add(new_user)
@@ -63,12 +63,12 @@ def signup_user(email, password, first_name, last_name, terms):
 def login_user(email, password):
     user = User.query.filter_by(email=email).first()
     if user:
-        salted_password = password + str(user.id)  # Ensure the password is salted with user ID
+        salted_password = password + str(user.id)  
         if check_password_hash(user.password_hash, salted_password):
-            return user  # Return user object if password is correct
-    return None  # Return None if the user does not exist or password is incorrect
+            return user 
+    return None
 
-# Generate reset code
+
 def generate_reset_code():
     return str(random.randint(100000, 999999))
 
@@ -101,12 +101,12 @@ def send_reset_email(email, reset_code):
 # Automatically log the user in based on cookies
 @app.before_request
 def check_remembered_user():
-    user_id = request.cookies.get('user_id')  # Retrieve user_id from cookie
+    user_id = request.cookies.get('user_id')  
 
-    if user_id and 'user_id' not in session:  # If user_id exists in cookie but is not in session
+    if user_id and 'user_id' not in session:  
         user = User.query.filter_by(id=user_id).first()
         if user:
-            session['user_id'] = user.id  # Set user_id in session
+            session['user_id'] = user.id  
 
 # Routes
 @app.route('/')
@@ -120,13 +120,13 @@ def signup():
         password = request.form['password']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
-        terms = request.form.get('terms')  # Get the 'terms' checkbox value (either 'on' or None)
+        terms = request.form.get('terms')  
 
         if terms is None:
             flash('You must agree to the terms and conditions!', 'error')
             return render_template('signup.html')
 
-        terms = True  # If checkbox is checked, it will be 'on'; if not, 'None'
+        terms = True  
 
         message = signup_user(email, password, first_name, last_name, terms)
         flash(message)
@@ -140,7 +140,7 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        remember_me = request.form.get('remember')  # Check if "remember me" is selected
+        remember_me = request.form.get('remember')  
 
         if not email or not password:
             flash("Email and password are required", "error")
@@ -150,13 +150,11 @@ def login():
         if user:
             flash('Login successful!', 'success')
 
-            # If "Remember Me" is checked, set a persistent cookie (for 30 days)
             if remember_me:
-                resp = make_response(redirect(url_for('dashboard')))  # Redirect to the dashboard
-                resp.set_cookie('user_id', user.id, max_age=60*60*24*30, secure=True, httponly=True)  # Cookie for 30 days
+                resp = make_response(redirect(url_for('dashboard'))) 
+                resp.set_cookie('user_id', user.id, max_age=60*60*24*30, secure=True, httponly=True)
                 return resp
             else:
-                # Regular session cookie for non-remembered users (expires when browser is closed)
                 session['user_id'] = user.id
                 return redirect(url_for('dashboard'))
         else:
@@ -169,19 +167,16 @@ def forgotpasswordemail():
     if request.method == 'POST':
         email = request.form['email']
 
-        # Query the user by email using SQLAlchemy
         user = User.query.filter_by(email=email).first()
 
         if user:
-            # Generate a unique reset code
-            reset_code = generate_reset_code()  # Assuming you have a function to generate this code
-            user.reset_code = reset_code  # Store the reset code in the user's record
-            db.session.commit()  # Commit changes to the database
+            reset_code = generate_reset_code()  
+            user.reset_code = reset_code  
+            db.session.commit()  
 
-            # Send the reset email with the reset code
-            if send_reset_email(email, reset_code):  # Assuming you have a function for sending email
+            if send_reset_email(email, reset_code):  
                 flash('Reset code sent to your email!', 'success')
-                return redirect(url_for('resetpassword'))  # Redirect to the reset password page
+                return redirect(url_for('resetpassword'))  
             else:
                 flash('Failed to send email. Please try again later.', 'error')
         else:
@@ -196,26 +191,25 @@ def resetpassword():
         new_password = request.form['new_password']
         confirm_password = request.form['confirm_password']
 
-        # Validate if the passwords match
+        
         if new_password != confirm_password:
             flash('Passwords do not match!', 'error')
             return redirect(url_for('resetpassword'))
 
-        # Query the user by reset code
+       
         user = User.query.filter_by(reset_code=reset_code).first()
 
         if user:
-            # Hash the new password with the user's ID as salt
-            salted_password = new_password + str(user.id)  # Ensure user.id is a string
+           
+            salted_password = new_password + str(user.id) 
             hashed_password = generate_password_hash(salted_password)
 
-            # Update the user's password and clear the reset code
             user.password_hash = hashed_password
-            user.reset_code = None  # Clear the reset code once it's used
-            db.session.commit()  # Commit changes to the database
+            user.reset_code = None  
+            db.session.commit()  
 
             flash('Password reset successful! Please log in.', 'success')
-            return redirect(url_for('login'))  # Redirect the user to the login page
+            return redirect(url_for('login'))  
         else:
             flash('Invalid reset code.', 'error')
 
@@ -227,9 +221,9 @@ def dashboard():
 
 @app.route('/logout')
 def logout():
-    session.pop('user_id', None)  # Remove from session
-    resp = make_response(redirect(url_for('index')))  # Redirect to home or login page
-    resp.delete_cookie('user_id')  # Remove the user_id cookie
+    session.pop('user_id', None) 
+    resp = make_response(redirect(url_for('index')))  
+    resp.delete_cookie('user_id')  
     flash('You have been logged out!', 'info')
     return resp
 
