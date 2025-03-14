@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup</title>
+    <title>Open Account</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="shortcut icon" type="image/x-icon" href="/static/images/PenguinLogoNoBG.ico" />
 </head>
@@ -22,7 +22,7 @@
 
         <!-- Right Side (Signup Form) -->
         <div class="signup-form">
-            <h1>Create an account</h1>
+            <h1>Open an account</h1>
             <p class="login-text">Already have an account? <a href="/login">Log in</a></p>
             
             <form action="/signup" method="post">
@@ -37,10 +37,10 @@
             <!-- Terms -->
             <div class="terms">
                 <input name="terms" type="checkbox" id="terms">
-                <label for="terms">I agree to the <a href="#">Terms & Conditions</a></label>
+                <label for="terms">I agree to the <a href="/terms">Terms & Conditions</a></label>
             </div>
             
-            <button type="submit" class="create-btn">Create account</button>
+            <button type="submit" class="create-btn">Open Account</button>
             </form>
             <div class="divider">
                 <span></span>

@@ -233,6 +233,10 @@ def logout():
     flash('You have been logged out!', 'info')
     return resp
 
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
