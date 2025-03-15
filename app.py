@@ -105,7 +105,7 @@ def send_reset_email(email, reset_code):
 # Routes
 @app.route('/')
 def index():
-    return render_template('signup.html')
+    return render_template('homepage.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -209,6 +209,10 @@ def forgotpasswordemail():
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
+
+@app.route('/homepage')
+def homepage():
+    return render_template('homepage.html')
 
 @app.route('/logout')
 def logout():

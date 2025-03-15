@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funding Traders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        accent: '#4db3ff',
+                        darkBg: '#10172a',
+                        darkBg2: '#182340',
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(77, 179, 255, 0.5)',
+                    }
+                }
+            }
+        }
+
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%);
+            font-family: 'Inter', sans-serif;
+        }
+        .dark body {
+            background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 1) 100%);
+        }
+        .feature-dots::before {
+            content: "•";
+            display: inline-block;
+            margin: 0 12px;
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #ffffff, #4db3ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card-glow {
+            background: rgba(77, 179, 255, 0.05);
+            box-shadow: 0 0 15px rgba(77, 179, 255, 0.2);
+            border: 1px solid rgba(77, 179, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white dark:text-white">
+    <div class="container mx-auto px-4 max-w-7xl">
+        <!-- Header Navigation -->
+        <header class="py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <div class="mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white">
+                        <path d="M16 16V8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold">Penguin Trader</h1>
+            </div>
+            
+            <nav class="hidden md:flex items-center space-x-6">
+                <a href="#" class="text-gray-300 hover:text-white text-sm">FAQ</a>
+                <a href="#" class="text-gray-300 hover:text-white text-sm">Contact us</a>
+                <a href="#" class="text-gray-300 hover:text-white text-sm">Affiliate</a>
+                <a href="#" class="text-gray-300 hover:text-white text-sm">Dashboard</a>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Twitter Icon -->
+                    <a href="#" class="text-gray-300 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
+                        </svg>
+                    </a>
+                    <!-- Discord Icon -->
+                    <a href="#" class="text-gray-300 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5.8 9a21.4 21.4 0 0 1 12.4 0M4 4l1.6 17.8L7 22l1.6-5.8a1 1 0 0 1 .4-.6l4.8-2.9a.4.4 0 0 0 0-.7L8.9 8.5a1 1 0 0 1-.4-.8L9 4l-5 .1z"/>
+                        </svg>
+                    </a>
+                </div>
+                
+                <a href="#" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-full text-sm">Get Funded</a>
+            </nav>
+            
+            <!-- Mobile menu button -->
+            <button class="md:hidden text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <line x1="4" y1="12" x2="20" y2="12"/>
+                    <line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="py-12 md:py-20">
+            <!-- Hero Section -->
+            <div class="text-center mb-16">
+                <h1 class="text-4xl md:text-6xl font-bold mb-2">Funding Traders</h1>
+                <h2 class="text-3xl md:text-5xl font-bold gradient-text">Up to $2M Capital</h2>
+            </div>
+
+        </main>
+
+        <!-- Feature Bar -->
+        <div class="overflow-x-auto pb-6">
+            <div class="flex items-center space-x-4 text-sm md:text-base text-gray-300 min-w-max py-2">
+                <span>Zero Commissions</span>
+                <span class="feature-dots">Weekend Trading</span>
+                <span class="feature-dots">EA's Allowed</span>
+                <span class="feature-dots">$2M Size</span>
+                <span class="feature-dots">7-14 Day Payout</span>
+                <span class="feature-dots">Unlimited...</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
