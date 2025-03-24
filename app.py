@@ -1,11 +1,12 @@
 import os
 import psycopg2
-from flask import Flask, render_template, request, redirect, url_for, flash, make_response, session
+from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, make_response, session
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import random
 import requests
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -13,6 +14,66 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "Jacques")
+
+# Get Alpha Vantage API key from environment variable
+ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo')
+
+@app.route('/index')
+def trade():
+    return render_template('index.html', api_key=ALPHA_VANTAGE_API_KEY)
+
+@app.route('/api/stock/<symbol>')
+def get_stock(symbol):
+    url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return jsonify(data)
+
+@app.route('/api/intraday/<symbol>')
+def get_intraday(symbol):
+    interval = request.args.get('interval', '5min')
+    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval={interval}&apikey={ALPHA_VANTAGE_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return jsonify(data)
+
+@app.route('/api/daily/<symbol>')
+def get_daily(symbol):
+    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return jsonify(data)
+
+@app.route('/api/search')
+def search():
+    query = request.args.get('q', '')
+    url = f'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={query}&apikey={ALPHA_VANTAGE_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
+    return jsonify(data)
+
+@app.route('/get_balance/<user_id>', methods=['GET'])
+def get_balance(user_id):
+    # Get the connection to your database (example with Supabase)
+    conn = get_supabase_connection()  # This is the database connection function
+    cursor = conn.cursor()
+    
+    # Query the database for the user's balance
+    cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+    
+    # Fetch the result
+    result = cursor.fetchone()
+    
+    # Close the connection
+    conn.close()
+
+    # Check if the user has a balance
+    if result:
+        balance = result[0]  # Assuming the balance is the first column
+        return jsonify({'balance': balance})  # Return balance as JSON
+    else:
+        return jsonify({'error': 'Balance not found'}), 404  # If no balance found
+
 
 # Database configuration (Supabase PostgreSQL)
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
@@ -25,7 +86,7 @@ def init_supabase_db():
     conn = get_supabase_connection()
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                        id TEXT PRIMARY KEY,
+                        user_id TEXT PRIMARY KEY,
                         email TEXT UNIQUE NOT NULL,
                         first_name TEXT NOT NULL,
                         last_name TEXT NOT NULL,
@@ -45,20 +106,31 @@ SPARKPOST_FROM_EMAIL = os.getenv("SPARKPOST_FROM_EMAIL")
 def signup_user(email, password, first_name, last_name, terms):
     conn = get_supabase_connection()
     cursor = conn.cursor()
+    
     cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
     user = cursor.fetchone()
     
     if user:
         return 'Email is already in use!'
     
+    # Generate unique user_id
     user_id = str(uuid.uuid4())
+    
+    # Salt the password with the user_id for extra security
     salted_password = password + user_id
     hashed_password = generate_password_hash(salted_password)
     
-    cursor.execute("INSERT INTO users (id, email, first_name, last_name, password_hash, terms) VALUES (%s, %s, %s, %s, %s, %s)",
-                   (user_id, email, first_name, last_name, hashed_password, terms))
+    # Get the current timestamp with timezone
+    current_timestamp = datetime.utcnow()
+
+    cursor.execute("""
+        INSERT INTO users (user_id, email, first_name, last_name, password_hash, terms, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (user_id, email, first_name, last_name, hashed_password, terms, current_timestamp))
+    
     conn.commit()
     conn.close()
+    
     return 'Signup successful! Please log in.'
 
 def login_user(email, password):
@@ -105,7 +177,7 @@ def send_reset_email(email, reset_code):
 # Routes
 @app.route('/')
 def index():
-    return render_template('signup.html')
+    return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -126,11 +198,15 @@ def signup():
         flash(message)
 
         if 'Signup successful!' in message:
-            return redirect(url_for('dashboard'))
+            return render_template('dashboard.html')
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Check if the user is already logged in by checking session
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))  # Redirect to index if logged in
+    
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -141,13 +217,24 @@ def login():
 
         user = login_user(email, password)
         if user:
+            remember = 'remember' in request.form  # Check if 'Remember me' is checked
+
+            # Set session duration based on "Remember me" checkbox
+            if remember:
+                session.permanent = True
+                app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
+            else:
+                session.permanent = False  # Session lasts until the browser is closed
+
+            session['user_id'] = user[0]  # Store user ID in session (or any unique identifier)
+            
             flash('Login successful!', 'success')
-            session['user_id'] = user[0]
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('dashboard'))  # Redirect to the index page after successful login
         else:
             flash('Invalid login credentials', 'error')
 
     return render_template('login.html')
+
 
 @app.route('/resetpassword', methods=['GET', 'POST'])
 def resetpassword():
@@ -208,17 +295,18 @@ def forgotpasswordemail():
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    # Check if the user is logged in by checking for an active session
+    if 'user_id' not in session:
+        flash('You must be logged in to access the dashboard', 'error')
+        return redirect(url_for('login'))  # Redirect to login page if no session exists
+    
+    user_id = session['user_id']  # Get the user ID from the session
+    return render_template('dashboard.html', user_id=user_id)
+
 
 @app.route('/homepage')
 def homepage():
     return render_template('homepage.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('user_id', None) 
-    flash('You have been logged out!', 'info')
-    return redirect(url_for('index'))
 
 @app.route('/terms')
 def terms():
