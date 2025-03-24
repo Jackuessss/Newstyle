@@ -504,7 +504,7 @@ html, body {
 
 /* Terms Banner Section */
 #terms-page .terms-banner {
-    background: #2B2637;
+    background: transparent;
     color: white;
     display: flex;
     justify-content: space-between;
