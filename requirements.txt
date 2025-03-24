@@ -1,0 +1,8 @@
+psycopg2-binary
+flask
+os
+werkzeug.security
+uuid
+random
+requests
+dotenv
