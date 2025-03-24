@@ -1,3 +1,10 @@
 psycopg2-binary
+psycopg2
+werkzeug.security
+werkzeug
 flask
 requests
+uuid
+random
+requests
+dotenv
