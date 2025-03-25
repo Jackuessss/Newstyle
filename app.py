@@ -177,6 +177,8 @@ def send_reset_email(email, reset_code):
 # Routes
 @app.route('/')
 def index():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
     return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
