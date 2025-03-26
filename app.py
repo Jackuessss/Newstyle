@@ -2,11 +2,14 @@ import os
 import psycopg2
 from flask import Flask, jsonify, render_template, request, redirect, url_for, flash, make_response, session
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import uuid
 import random
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from supabase import create_client, Client
+from psycopg2.extras import RealDictCursor
 
 # Load environment variables
 load_dotenv()
@@ -15,8 +18,47 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "Jacques")
 
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# User class for Flask-Login
+class User(UserMixin):
+    def __init__(self, user_id, email, first_name, last_name):
+        self.id = user_id
+        self.email = email
+        self.first_name = first_name
+        self.last_name = last_name
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_supabase_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user:
+        return User(user[0], user[1], user[2], user[3])
+    return None
+
 # Get Alpha Vantage API key from environment variable
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo')
+
+# Supabase configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_DB_URL = os.getenv('SUPABASE_DB_URL')
+
+# Initialize Supabase client only if credentials are available
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"Warning: Failed to initialize Supabase client: {e}")
+        supabase = None
 
 @app.route('/index')
 def trade():
@@ -24,56 +66,107 @@ def trade():
 
 @app.route('/api/stock/<symbol>')
 def get_stock(symbol):
-    url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    return jsonify(data)
+    try:
+        url = f'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        data = response.json()
+        
+        if 'Error Message' in data:
+            return jsonify({'error': data['Error Message']}), 400
+            
+        if 'Note' in data:  # API rate limit message
+            return jsonify({'error': 'API rate limit reached. Please try again later.'}), 429
+            
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/intraday/<symbol>')
 def get_intraday(symbol):
-    interval = request.args.get('interval', '5min')
-    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval={interval}&apikey={ALPHA_VANTAGE_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    return jsonify(data)
+    try:
+        interval = request.args.get('interval', '5min')
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval={interval}&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'Error Message' in data:
+            return jsonify({'error': data['Error Message']}), 400
+            
+        if 'Note' in data:  # API rate limit message
+            return jsonify({'error': 'API rate limit reached. Please try again later.'}), 429
+            
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/daily/<symbol>')
 def get_daily(symbol):
-    url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    return jsonify(data)
+    try:
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'Error Message' in data:
+            return jsonify({'error': data['Error Message']}), 400
+            
+        if 'Note' in data:  # API rate limit message
+            return jsonify({'error': 'API rate limit reached. Please try again later.'}), 429
+            
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/search')
 def search():
-    query = request.args.get('q', '')
-    url = f'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={query}&apikey={ALPHA_VANTAGE_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    return jsonify(data)
+    try:
+        query = request.args.get('q', '')
+        url = f'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={query}&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        
+        if 'Error Message' in data:
+            return jsonify({'error': data['Error Message']}), 400
+            
+        if 'Note' in data:  # API rate limit message
+            return jsonify({'error': 'API rate limit reached. Please try again later.'}), 429
+            
+        return jsonify(data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/get_balance/<user_id>', methods=['GET'])
+def get_db_connection():
+    if not SUPABASE_DB_URL:
+        raise Exception("SUPABASE_DB_URL environment variable is not set")
+    return psycopg2.connect(SUPABASE_DB_URL)
+
+@app.route('/get_balance/<user_id>')
 def get_balance(user_id):
-    # Get the connection to your database (example with Supabase)
-    conn = get_supabase_connection()  # This is the database connection function
-    cursor = conn.cursor()
-    
-    # Query the database for the user's balance
-    cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
-    
-    # Fetch the result
-    result = cursor.fetchone()
-    
-    # Close the connection
-    conn.close()
-
-    # Check if the user has a balance
-    if result:
-        balance = result[0]  # Assuming the balance is the first column
-        return jsonify({'balance': balance})  # Return balance as JSON
-    else:
-        return jsonify({'error': 'Balance not found'}), 404  # If no balance found
-
+    try:
+        if not SUPABASE_DB_URL:
+            return jsonify({'error': 'Database connection not configured'}), 500
+            
+        conn = get_supabase_connection()
+        cur = conn.cursor()
+        
+        # Query the users table for balance
+        cur.execute('SELECT balance FROM users WHERE user_id = %s', (user_id,))
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if result and result[0] is not None:
+            return jsonify({'balance': float(result[0])})
+        else:
+            return jsonify({'balance': 0.00})
+            
+    except Exception as e:
+        print(f"Error fetching balance: {e}")
+        return jsonify({'balance': 0.00})
 
 # Database configuration (Supabase PostgreSQL)
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
@@ -92,7 +185,9 @@ def init_supabase_db():
                         last_name TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
                         reset_code TEXT,
-                        terms BOOLEAN NOT NULL)''')
+                        terms BOOLEAN NOT NULL,
+                        balance DECIMAL(10,2) DEFAULT 0.00,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     conn.close()
 
@@ -133,7 +228,7 @@ def signup_user(email, password, first_name, last_name, terms):
     
     return 'Signup successful! Please log in.'
 
-def login_user(email, password):
+def authenticate_user(email, password):
     conn = get_supabase_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
@@ -205,9 +300,9 @@ def signup():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Check if the user is already logged in by checking session
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))  # Redirect to index if logged in
+    # Check if the user is already logged in
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
         email = request.form.get('email')
@@ -217,26 +312,29 @@ def login():
             flash("Email and password are required", "error")
             return redirect(url_for('login'))
 
-        user = login_user(email, password)
-        if user:
-            remember = 'remember' in request.form  # Check if 'Remember me' is checked
-
-            # Set session duration based on "Remember me" checkbox
+        user_data = authenticate_user(email, password)
+        if user_data:
+            user = User(user_data[0], user_data[1], user_data[2], user_data[3])
+            login_user(user)
+            
+            remember = 'remember' in request.form
             if remember:
                 session.permanent = True
-                app.permanent_session_lifetime = timedelta(days=30)  # Session lasts 30 days
-            else:
-                session.permanent = False  # Session lasts until the browser is closed
-
-            session['user_id'] = user[0]  # Store user ID in session (or any unique identifier)
+                app.permanent_session_lifetime = timedelta(days=30)
             
             flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))  # Redirect to the index page after successful login
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid login credentials', 'error')
 
     return render_template('login.html')
 
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/resetpassword', methods=['GET', 'POST'])
 def resetpassword():
@@ -296,15 +394,14 @@ def forgotpasswordemail():
     return render_template('forgotpasswordemail.html')
 
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    # Check if the user is logged in by checking for an active session
-    if 'user_id' not in session:
-        flash('You must be logged in to access the dashboard', 'error')
-        return redirect(url_for('login'))  # Redirect to login page if no session exists
-    
-    user_id = session['user_id']  # Get the user ID from the session
-    return render_template('dashboard.html', user_id=user_id)
+    return render_template('dashboard.html', user_id=current_user.id)
 
+@app.route('/stocks')
+@login_required
+def stocks():
+    return render_template('stocks.html', user_id=current_user.id)
 
 @app.route('/homepage')
 def homepage():
@@ -313,6 +410,138 @@ def homepage():
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
+
+@app.route('/api/watchlist', methods=['GET'])
+def get_watchlist():
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'User ID is required'}), 400
+
+        # Query watchlist from Supabase
+        response = supabase.table('watchlist').select('*').eq('user_id', user_id).execute()
+        
+        if response.error:
+            return jsonify({'error': str(response.error)}), 500
+            
+        return jsonify(response.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/watchlist', methods=['POST'])
+def add_to_watchlist():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        symbol = data.get('symbol')
+        
+        if not user_id or not symbol:
+            return jsonify({'error': 'User ID and symbol are required'}), 400
+
+        # Check if stock is already in watchlist
+        existing = supabase.table('watchlist').select('*').eq('user_id', user_id).eq('symbol', symbol).execute()
+        
+        if existing.data:
+            return jsonify({'error': 'Stock already in watchlist'}), 400
+
+        # Add to watchlist
+        response = supabase.table('watchlist').insert({
+            'user_id': user_id,
+            'symbol': symbol,
+            'created_at': datetime.now().isoformat()
+        }).execute()
+        
+        if response.error:
+            return jsonify({'error': str(response.error)}), 500
+            
+        return jsonify(response.data[0])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/watchlist', methods=['DELETE'])
+def remove_from_watchlist():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        symbol = data.get('symbol')
+        
+        if not user_id or not symbol:
+            return jsonify({'error': 'User ID and symbol are required'}), 400
+
+        # Remove from watchlist
+        response = supabase.table('watchlist').delete().eq('user_id', user_id).eq('symbol', symbol).execute()
+        
+        if response.error:
+            return jsonify({'error': str(response.error)}), 500
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/forex/<symbol>')
+def get_forex_data(symbol):
+    try:
+        # Format the symbol for Alpha Vantage
+        from_currency = symbol[:3]
+        to_currency = symbol[3:]
+        
+        # Call Alpha Vantage API for forex data
+        url = f'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency={from_currency}&to_currency={to_currency}&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        data = response.json()
+        
+        if "Realtime Currency Exchange Rate" in data:
+            rate_data = data["Realtime Currency Exchange Rate"]
+            price = float(rate_data["5. Exchange Rate"])
+            
+            # Calculate a random change percentage for demo
+            change = round(random.uniform(-1.5, 1.5), 2)
+            
+            return jsonify({
+                'symbol': f'{from_currency}/{to_currency}',
+                'name': f'{from_currency}/{to_currency}',
+                'price': price,
+                'change': change,
+                'sell': price * 0.9995,  # Slightly lower for sell
+                'buy': price * 1.0005    # Slightly higher for buy
+            })
+        else:
+            return jsonify({'error': 'Unable to fetch forex data'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/forex/history/<symbol>')
+def get_forex_history(symbol):
+    try:
+        # Format the symbol for Alpha Vantage
+        from_currency = symbol[:3]
+        to_currency = symbol[3:]
+        
+        # Call Alpha Vantage API for intraday data
+        url = f'https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol={from_currency}&to_symbol={to_currency}&interval=5min&apikey={ALPHA_VANTAGE_API_KEY}'
+        response = requests.get(url)
+        data = response.json()
+        
+        if "Time Series FX (5min)" in data:
+            time_series = data["Time Series FX (5min)"]
+            timestamps = []
+            prices = []
+            
+            # Get the last 100 data points
+            for timestamp, values in list(time_series.items())[:100]:
+                timestamps.append(timestamp)
+                prices.append(float(values["4. close"]))
+            
+            return jsonify({
+                'timestamps': timestamps,
+                'prices': prices
+            })
+        else:
+            return jsonify({'error': 'Unable to fetch forex history'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
