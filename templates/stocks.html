@@ -287,6 +287,7 @@
             
             const watchlistNav = document.getElementById('watchlist-nav');
             const searchInput = document.getElementById('stock-search');
+            const stockList = document.getElementById('stock-list');
             watchlistNav.innerHTML = ''; // Clear existing content
             
             // Add each watchlist to the navigation
@@ -305,6 +306,79 @@
                 watchlistNav.appendChild(link);
             });
             
+            // Function to load watchlist items
+            async function loadWatchlistItems(watchlistId) {
+                try {
+                    const response = await fetch(`/api/watchlist/${watchlistId}/items`);
+                    const data = await response.json();
+                    
+                    // Update search placeholder with watchlist name
+                    searchInput.placeholder = `Search ${data.watchlist_name}...`;
+                    
+                    // Clear existing stock list
+                    stockList.innerHTML = '';
+                    
+                    if (data.items.length === 0) {
+                        // Show empty message
+                        stockList.innerHTML = `
+                            <div class="p-4 text-center text-gray-500">
+                                ${data.message}
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Add each stock to the list
+                    data.items.forEach(stock => {
+                        const div = document.createElement('div');
+                        div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                        div.setAttribute('data-symbol', stock.symbol);
+                        
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 flex-shrink-0">
+                                        <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">${stock.name}</div>
+                                        <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-semibold">$${stock.price.toFixed(2)}</div>
+                                    <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                        ${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)} (${stock.isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}%)
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        div.addEventListener('click', () => {
+                            // Remove active class from all items
+                            document.querySelectorAll('#stock-list > div').forEach(item => {
+                                item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                            });
+                            
+                            // Add active class to clicked item
+                            div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                            
+                            // Show stock details
+                            showStockDetail(stock);
+                        });
+                        
+                        stockList.appendChild(div);
+                    });
+                } catch (error) {
+                    console.error('Error loading watchlist items:', error);
+                    stockList.innerHTML = `
+                        <div class="p-4 text-center text-red-500">
+                            Error loading watchlist items
+                        </div>
+                    `;
+                }
+            }
+            
             // Highlight the active watchlist based on URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             const activeWatchlistId = urlParams.get('watchlist');
@@ -314,11 +388,8 @@
                 if (activeLink) {
                     activeLink.classList.remove('text-gray-400');
                     activeLink.classList.add('text-primary');
-                    // Update search placeholder with active watchlist name
-                    const activeWatchlist = watchlists.find(w => w.watchlist_id === activeWatchlistId);
-                    if (activeWatchlist) {
-                        searchInput.placeholder = `Search ${activeWatchlist.watchlist_name}...`;
-                    }
+                    // Load items for the active watchlist
+                    loadWatchlistItems(activeWatchlistId);
                 }
             } else if (watchlists.length > 0) {
                 // If no watchlist is selected, highlight the first one
@@ -326,19 +397,17 @@
                 if (firstLink) {
                     firstLink.classList.remove('text-gray-400');
                     firstLink.classList.add('text-primary');
-                    // Update search placeholder with first watchlist name
-                    searchInput.placeholder = `Search ${watchlists[0].watchlist_name}...`;
+                    // Load items for the first watchlist
+                    const firstWatchlistId = new URLSearchParams(new URL(firstLink.href).search).get('watchlist');
+                    loadWatchlistItems(firstWatchlistId);
                 }
             }
 
-            // Add click event listeners to update search placeholder when watchlist is clicked
+            // Add click event listeners to update watchlist items when watchlist is clicked
             watchlistNav.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', (e) => {
                     const watchlistId = new URLSearchParams(new URL(link.href).search).get('watchlist');
-                    const watchlist = watchlists.find(w => w.watchlist_id === watchlistId);
-                    if (watchlist) {
-                        searchInput.placeholder = `Search ${watchlist.watchlist_name}...`;
-                    }
+                    loadWatchlistItems(watchlistId);
                 });
             });
         } catch (error) {

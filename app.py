@@ -226,6 +226,13 @@ def init_supabase_db():
                         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users(user_id))''')
     
+    cursor.execute('''CREATE TABLE IF NOT EXISTS watchlist_items (
+                        watchlist_item_id TEXT PRIMARY KEY,
+                        watchlist_id TEXT NOT NULL,
+                        stock_symbol TEXT NOT NULL,
+                        added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (watchlist_id) REFERENCES watchlist(watchlist_id))''')
+    
     conn.commit()
     conn.close()
 
@@ -657,6 +664,106 @@ def get_user_watchlists(user_id):
             })
 
         return jsonify(watchlist_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/watchlist/<watchlist_id>/items')
+@login_required
+def get_watchlist_items(watchlist_id):
+    try:
+        # First verify the watchlist belongs to the current user
+        conn = get_supabase_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT w.watchlist_id, w.watchlist_name 
+            FROM watchlist w 
+            WHERE w.watchlist_id = %s AND w.user_id = %s
+        """, (watchlist_id, current_user.id))
+        watchlist = cursor.fetchone()
+        
+        if not watchlist:
+            return jsonify({'error': 'Watchlist not found or unauthorized'}), 404
+            
+        # Get all items in the watchlist
+        cursor.execute("""
+            SELECT stock_symbol 
+            FROM watchlist_items 
+            WHERE watchlist_id = %s
+        """, (watchlist_id,))
+        items = cursor.fetchall()
+        conn.close()
+        
+        if not items:
+            return jsonify({
+                'watchlist_name': watchlist[1],
+                'items': [],
+                'message': f"{watchlist[1]} is empty"
+            })
+            
+        # Demo data for the stocks
+        demo_data = {
+            'TSLA': {
+                'name': 'Tesla',
+                'price': 274.43,
+                'change': 25.06,
+                'changePercent': 10.05,
+                'color': '#E31937',
+                'logoUrl': 'https://i.imgur.com/ks33QCe.png',
+                'isPositive': True
+            },
+            'NVDA': {
+                'name': 'Nvidia',
+                'price': 121.92,
+                'change': 4.15,
+                'changePercent': 3.52,
+                'color': '#76B900',
+                'logoUrl': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFAkwq5rkkbUsQuJvSThsHS05SkYYejcUijA&s',
+                'isPositive': True
+            },
+            'MIGO': {
+                'name': 'MicroAlgo',
+                'price': 9.84,
+                'change': 7.34,
+                'changePercent': 293.60,
+                'color': '#FF0000',
+                'logoUrl': 'https://i.imgur.com/sCHHSNG.png',
+                'isPositive': True
+            },
+            'PLTR': {
+                'name': 'Palantir',
+                'price': 96.10,
+                'change': 5.10,
+                'changePercent': 5.60,
+                'color': '#000000',
+                'logoUrl': 'https://static.stocktitan.net/company-logo/pltr.png',
+                'isPositive': True
+            },
+            'MSTR': {
+                'name': 'MicroStrategy',
+                'price': 331.16,
+                'change': 11.87,
+                'changePercent': 3.72,
+                'color': '#CC0000',
+                'logoUrl': 'https://i.imgur.com/RG3TgEY.png',
+                'isPositive': True
+            }
+        }
+        
+        # Get stock data for each symbol in the watchlist
+        watchlist_items = []
+        for item in items:
+            symbol = item[0]
+            if symbol in demo_data:
+                watchlist_items.append({
+                    'symbol': symbol,
+                    **demo_data[symbol]
+                })
+        
+        return jsonify({
+            'watchlist_name': watchlist[1],
+            'items': watchlist_items
+        })
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
