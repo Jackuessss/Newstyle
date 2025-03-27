@@ -226,7 +226,9 @@
                 <div class="sticky top-0 z-10 bg-white dark:bg-darkbg p-4 border-b dark:border-gray-700 border-gray-200">
                     <div class="relative">
                         <input type="text" id="stock-search" placeholder="Search stocks..." class="w-full px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                        <div id="search-results" class="absolute w-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hidden z-10"></div>
+                        <div id="search-results" class="absolute w-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg hidden z-50 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
+                            <!-- Search results will be dynamically inserted here -->
+                        </div>
                     </div>
                 </div>
                 
@@ -261,21 +263,31 @@
                         </div>
                     </div>
                     
-                    <!-- Chart -->
-                    <div class="flex-grow mt-6">
-                        <div id="stock-chart" class="w-full h-[300px] flex-grow"></div>
-                    </div>
-                </div>
-                
-                <!-- Time Period Selection - Moved to bottom -->
-                <div class="border-t dark:border-gray-700 border-gray-200 p-4">
-                    <div class="flex justify-between text-sm">
-                        <button class="time-button px-4 py-2 time-active">1D</button>
-                        <button class="time-button px-4 py-2">1W</button>
-                        <button class="time-button px-4 py-2">1M</button>
-                        <button class="time-button px-4 py-2">3M</button>
-                        <button class="time-button px-4 py-2">1Y</button>
-                        <button class="time-button px-4 py-2">MAX</button>
+                    <!-- Chart section -->
+                    <div class="flex-1 flex flex-col">
+                        <div class="flex items-center justify-between p-4 border-b dark:border-gray-700 border-gray-200">
+                            <div class="flex items-center space-x-2">
+                                <button class="time-button time-active px-3 py-1 text-sm rounded-full bg-primary/10 dark:bg-primary/20 text-primary">1D</button>
+                                <button class="time-button px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">1W</button>
+                                <button class="time-button px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">1M</button>
+                                <button class="time-button px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">3M</button>
+                                <button class="time-button px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">1Y</button>
+                                <button class="time-button px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">MAX</button>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button id="chart-type-toggle" class="px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                                    </svg>
+                                </button>
+                                <button id="fullscreen-toggle" class="px-3 py-1 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="stock-chart" class="flex-1 min-h-[400px] w-full"></div>
                     </div>
                 </div>
             </div>

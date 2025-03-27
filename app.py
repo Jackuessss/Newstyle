@@ -46,6 +46,9 @@ def load_user(user_id):
 # Get Alpha Vantage API key from environment variable
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo')
 
+# Get Finnhub API key from environment variable
+FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', 'demo')
+
 # Supabase configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
@@ -120,23 +123,49 @@ def get_daily(symbol):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/search')
-def search():
+def search_stocks():
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify({'error': 'No search query provided'})
+    
     try:
-        query = request.args.get('q', '')
-        url = f'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={query}&apikey={ALPHA_VANTAGE_API_KEY}'
+        # Finnhub API endpoint for symbol search
+        url = f"https://finnhub.io/api/v1/search?q={query}&token={FINNHUB_API_KEY}"
         response = requests.get(url)
         response.raise_for_status()
         data = response.json()
         
-        if 'Error Message' in data:
-            return jsonify({'error': data['Error Message']}), 400
-            
-        if 'Note' in data:  # API rate limit message
-            return jsonify({'error': 'API rate limit reached. Please try again later.'}), 429
-            
-        return jsonify(data)
+        if 'result' not in data:
+            return jsonify({'error': 'No results found'})
+        
+        # Get current prices for the search results
+        results = []
+        for stock in data['result'][:10]:  # Limit to 10 results
+            try:
+                # Get current quote
+                quote_url = f"https://finnhub.io/api/v1/quote?symbol={stock['symbol']}&token={FINNHUB_API_KEY}"
+                quote_response = requests.get(quote_url)
+                quote_response.raise_for_status()
+                quote_data = quote_response.json()
+                
+                if quote_data and quote_data.get('c'):  # If we have current price
+                    results.append({
+                        'symbol': stock['symbol'],
+                        'description': stock['description'],
+                        'price': quote_data['c'],
+                        'change': quote_data['d'],
+                        'changePercent': quote_data['dp']
+                    })
+            except Exception as e:
+                print(f"Error fetching quote for {stock['symbol']}: {str(e)}")
+                continue
+        
+        return jsonify({'result': results})
+        
     except requests.exceptions.RequestException as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'API request failed: {str(e)}'})
+    except Exception as e:
+        return jsonify({'error': f'An error occurred: {str(e)}'})
 
 def get_db_connection():
     if not SUPABASE_DB_URL:

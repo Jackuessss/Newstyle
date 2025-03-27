@@ -264,13 +264,85 @@
                 watchlistHeader.innerHTML = `<span id="watchlist-name">Stocks</span>`;
             }
             
-            // Add stocks to the list
+            // Initialize stock list with all default stocks
             const stockListEl = document.getElementById('stock-list');
             if (stockListEl) {
                 stockListEl.innerHTML = ''; // Clear the list
                 defaultStocks.forEach(stock => {
-                    stockListEl.appendChild(createStockElement(stock));
+                    const div = document.createElement('div');
+                    div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                    div.setAttribute('data-symbol', stock.symbol);
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 flex-shrink-0">
+                                    <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                </div>
+                                <div>
+                                    <div class="font-medium">${stock.name}</div>
+                                    <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                                <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                    ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    div.addEventListener('click', () => {
+                        // Remove active class from all items
+                        document.querySelectorAll('#stock-list > div').forEach(item => {
+                            item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                        });
+                        
+                        // Add active class to clicked item
+                        div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                        
+                        // Show stock details
+                        showStockDetail(stock);
+                    });
+                    
+                    stockListEl.appendChild(div);
                 });
+            }
+            
+            // Search functionality
+            const searchInput = document.getElementById('stock-search');
+            const searchResults = document.getElementById('search-results');
+            let searchTimeout;
+
+            if (searchInput && searchResults) {
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    const query = e.target.value.trim();
+                    
+                    if (query.length < 2) {
+                        searchResults.classList.add('hidden');
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(async () => {
+                        const results = await searchStocks(query);
+                        displaySearchResults(results);
+                    }, 300);
+                });
+
+                // Close search results when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Show NVIDIA stock as default
+            const nvidiaStock = defaultStocks.find(stock => stock.symbol === 'NVDA');
+            if (nvidiaStock) {
+                showStockDetail(nvidiaStock);
             }
             
             // Show NVIDIA stock details by default
@@ -280,7 +352,7 @@
                 
                 // Generate and show sample chart data
                 const chartData = generateChartData(30);
-                const chartTrace = {
+                const trace = {
                     x: chartData.map(d => d.x),
                     open: chartData.map(d => d.o),
                     high: chartData.map(d => d.h),
@@ -300,11 +372,11 @@
                     }
                 };
 
-                const chartLayout = {
+                const layout = {
                     template: 'plotly_dark',
                     paper_bgcolor: 'rgba(0,0,0,0)',
                     plot_bgcolor: 'rgba(0,0,0,0)',
-                    margin: { t: 20, b: 40, l: 40, r: 40 },
+                    margin: { t: 10, b: 40, l: 40, r: 40 },
                     xaxis: {
                         rangeslider: { visible: false },
                         color: 'rgba(156, 163, 175, 0.8)',
@@ -320,17 +392,17 @@
                         showticklabels: true
                     },
                     showlegend: false,
-                    height: 400
+                    height: 500
                 };
 
-                const chartConfig = {
+                const config = {
                     responsive: true,
                     displayModeBar: false
                 };
 
                 const chartEl = document.getElementById('stock-chart');
                 if (chartEl) {
-                    Plotly.newPlot('stock-chart', [chartTrace], chartLayout, chartConfig);
+                    Plotly.newPlot('stock-chart', [trace], layout, config);
                 }
             }
 
@@ -338,203 +410,11 @@
             const { watchlist: initialWatchlist, watchlistId } = await loadWatchlist();
             watchlist = initialWatchlist;
             
-            // Set up search functionality
-            const searchInput = document.getElementById('stock-search');
-            const searchResults = document.getElementById('search-results');
-            const navSearchInput = document.getElementById('nav-search');
-            const navSearchResults = document.getElementById('nav-search-results');
-            const searchToggle = document.getElementById('search-toggle');
-            const searchContainer = document.getElementById('search-container');
-            let searchTimeout;
-            
-            // Toggle search container
-            searchToggle.addEventListener('click', () => {
-                searchContainer.classList.toggle('hidden');
-                if (!searchContainer.classList.contains('hidden')) {
-                    navSearchInput.focus();
-                }
-            });
-            
-            // Close search container when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!searchToggle.contains(e.target) && !searchContainer.contains(e.target)) {
-                    searchContainer.classList.add('hidden');
-                }
-            });
-            
-            // Handle nav search input
-            navSearchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
-                
-                if (query.length < 2) {
-                    navSearchResults.innerHTML = '';
-                    return;
-                }
-                
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`/api/search?q=${query}`);
-                        const data = await response.json();
-                        
-                        if (data.error) {
-                            showError(data.error);
-                            return;
-                        }
-                        
-                        navSearchResults.innerHTML = '';
-                        if (data.bestMatches && data.bestMatches.length > 0) {
-                            data.bestMatches.forEach(result => {
-                                navSearchResults.appendChild(createNavSearchResultElement(result));
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Error searching stocks:', error);
-                        showError('Failed to search stocks');
-                    }
-                }, SEARCH_DELAY); // Increased delay for search
-            });
-            
-            // Handle main search input
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim().toLowerCase();
-                const stockList = document.getElementById('stock-list');
-                const allStocks = Array.from(stockList.children);
-                
-                if (query.length < 2) {
-                    // Show all stocks if query is too short
-                    allStocks.forEach(stock => {
-                        stock.style.display = 'block';
-                    });
-                    return;
-                }
-                
-                searchTimeout = setTimeout(() => {
-                    // Filter stocks based on query
-                    allStocks.forEach(stock => {
-                        const symbol = stock.dataset.symbol.toLowerCase();
-                        const name = stock.querySelector('.font-medium').textContent.toLowerCase();
-                        
-                        if (symbol.includes(query) || name.includes(query)) {
-                            stock.style.display = 'block';
-                        } else {
-                            stock.style.display = 'none';
-                        }
-                    });
-                    
-                    // Check if any stocks are visible
-                    const visibleStocks = allStocks.filter(stock => stock.style.display !== 'none');
-                    if (visibleStocks.length === 0) {
-                        // Show "No stocks found" message
-                        const noResults = document.createElement('div');
-                        noResults.className = 'p-4 text-center text-gray-500 dark:text-gray-400';
-                        noResults.textContent = 'No stocks found matching your search';
-                        
-                        // Remove any existing "No stocks found" message
-                        const existingNoResults = stockList.querySelector('.text-gray-500');
-                        if (existingNoResults) {
-                            existingNoResults.remove();
-                        }
-                        
-                        stockList.appendChild(noResults);
-                    } else {
-                        // Remove "No stocks found" message if it exists
-                        const noResults = stockList.querySelector('.text-gray-500');
-                        if (noResults) {
-                            noResults.remove();
-                        }
-                    }
-                }, 300);
-            });
-            
-            // Close search results when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                    searchResults.classList.add('hidden');
-                }
-            });
-            
-            // Initialize stock list with watchlist
-            await updateStockList();
-            
-            // Show NVIDIA stock as default using sample data
-            const nvidiaStock = defaultStocks.find(stock => stock.symbol === 'NVDA');
-            
-            // Add NVIDIA to stock list
-            stockListEl.innerHTML = ''; // Clear the list
-            stockListEl.appendChild(createStockElement(nvidiaStock));
-            
-            // Show NVIDIA details immediately
-            const detailSection = document.getElementById('stock-detail');
-            detailSection.classList.remove('hidden');
-            
-            document.getElementById('detail-name').textContent = nvidiaStock.name;
-            document.getElementById('detail-symbol').textContent = nvidiaStock.symbol;
-            
-            const changeElement = document.getElementById('detail-change');
-            const changeText = `${nvidiaStock.changePercent >= 0 ? '+' : ''}${nvidiaStock.changePercent.toFixed(2)}% (${nvidiaStock.change >= 0 ? '+' : ''}${nvidiaStock.change.toFixed(2)})`;
-            changeElement.textContent = changeText;
-            changeElement.className = nvidiaStock.isPositive ? 'text-positive' : 'text-negative';
-            
-            document.getElementById('detail-sell-price').textContent = `$${formatPrice(nvidiaStock.price)}`;
-            document.getElementById('detail-buy-price').textContent = `$${formatPrice(nvidiaStock.price + 0.03)}`;
-            
-            // Generate and show sample chart data
-            const sampleChartData = generateChartData(30);
-            const trace = {
-                x: sampleChartData.map(d => d.x),
-                open: sampleChartData.map(d => d.o),
-                high: sampleChartData.map(d => d.h),
-                low: sampleChartData.map(d => d.l),
-                close: sampleChartData.map(d => d.c),
-                type: 'candlestick',
-                xaxis: 'x',
-                yaxis: 'y',
-                name: 'NVDA',
-                increasing: {
-                    line: { color: '#16c784' },
-                    fillcolor: '#16c784'
-                },
-                decreasing: {
-                    line: { color: '#ea3943' },
-                    fillcolor: '#ea3943'
-                }
-            };
-
-            const layout = {
-                template: 'plotly_dark',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                margin: { t: 20, b: 40, l: 40, r: 40 },
-                xaxis: {
-                    rangeslider: { visible: false },
-                    color: 'rgba(156, 163, 175, 0.8)',
-                    showgrid: false,
-                    showticklabels: true,
-                    tickangle: -45,
-                    tickformat: '%Y-%m-%d'
-                },
-                yaxis: {
-                    color: 'rgba(156, 163, 175, 0.8)',
-                    side: 'right',
-                    showgrid: false,
-                    showticklabels: true
-                },
-                showlegend: false,
-                height: 400
-            };
-
-            const config = {
-                responsive: true,
-                displayModeBar: false
-            };
-
-            Plotly.newPlot('stock-chart', [trace], layout, config);
-            
             // Update the section title to "Stocks"
             const watchlistNameEl = document.getElementById('watchlist-name');
-            watchlistNameEl.textContent = 'Stocks';
+            if (watchlistNameEl) {
+                watchlistNameEl.textContent = 'Stocks';
+            }
             
             // Initialize real-time updates
             initializeRealTimeUpdates();
@@ -582,23 +462,6 @@
                 // Show edit watchlist modal or form
                 console.log('Edit watchlist clicked');
             });
-
-            // Update stock list item click handler to use primary color
-            function createStockListItem(symbol, price, change) {
-                const li = document.createElement('li');
-                li.className = 'p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200';
-                li.setAttribute('data-symbol', symbol);
-                li.addEventListener('click', () => {
-                    // Remove active class from all items
-                    document.querySelectorAll('#stock-list li').forEach(item => {
-                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
-                    });
-                    // Add active class to clicked item
-                    li.classList.add('bg-primary/10', 'dark:bg-primary/20');
-                    updateStockDetails(symbol);
-                });
-                // ... rest of the createStockListItem function ...
-            }
 
             // Navigation handling
             const stocksNav = document.querySelector('a[data-section="stocks"]');
@@ -780,6 +643,51 @@
 
             // Set initial active state
             stocksNav.classList.add('text-primary');
+
+            // Add event listeners for time period buttons
+            const timeButtons = document.querySelectorAll('.time-button');
+            timeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons
+                    timeButtons.forEach(btn => btn.classList.remove('time-active'));
+                    // Add active class to clicked button
+                    button.classList.add('time-active');
+                    
+                    // Get the time period from the button text
+                    const period = button.textContent;
+                    let days;
+                    switch(period) {
+                        case '1D': days = 1; break;
+                        case '1W': days = 7; break;
+                        case '1M': days = 30; break;
+                        case '3M': days = 90; break;
+                        case '1Y': days = 365; break;
+                        case 'MAX': days = 365 * 5; break;
+                    }
+                    
+                    // Update chart with new time period
+                    const currentSymbol = document.getElementById('detail-symbol').textContent;
+                    updateChart(currentSymbol, days);
+                });
+            });
+
+            // Add chart type toggle functionality
+            const chartTypeToggle = document.getElementById('chart-type-toggle');
+            let isCandlestick = true;
+
+            chartTypeToggle.addEventListener('click', () => {
+                isCandlestick = !isCandlestick;
+                const currentSymbol = document.getElementById('detail-symbol').textContent;
+                const currentDays = parseInt(document.querySelector('.time-button.time-active').textContent.replace(/[^0-9]/g, '')) || 30;
+                updateChart(currentSymbol, currentDays);
+            });
+
+            // Add placeholder for fullscreen toggle
+            const fullscreenToggle = document.getElementById('fullscreen-toggle');
+            fullscreenToggle.addEventListener('click', () => {
+                // Placeholder for fullscreen functionality
+                console.log('Fullscreen toggle clicked');
+            });
         });
         
         /**
@@ -911,186 +819,88 @@
         // Function to search for stocks
         async function searchStocks(query) {
             try {
-                const response = await fetch(`/api/search?q=${query}`);
-                const data = await response.json();
+                // Convert query to lowercase for case-insensitive search
+                const searchQuery = query.toLowerCase();
                 
-                if (data['bestMatches']) {
-                    return data['bestMatches'].map(match => ({
-                        symbol: match['1. symbol'],
-                        name: match['2. name'],
-                    }));
-                }
+                // Filter through default stocks
+                const results = defaultStocks.filter(stock => {
+                    // Search in both symbol and name
+                    return stock.symbol.toLowerCase().includes(searchQuery) ||
+                           stock.name.toLowerCase().includes(searchQuery);
+                });
                 
-                return [];
+                // Map the results to match the expected format
+                return results.map(stock => ({
+                    symbol: stock.symbol,
+                    name: stock.name,
+                    price: stock.price,
+                    change: stock.change,
+                    changePercent: stock.changePercent,
+                    type: 'stock',
+                    currency: 'USD',
+                    exchange: 'US',
+                    isPositive: stock.isPositive,
+                    logoUrl: stock.logoUrl
+                }));
             } catch (error) {
                 console.error('Error searching stocks:', error);
                 return [];
             }
         }
 
-        // Function to update stock prices in the sidebar
-        async function updateStockPrices() {
-            const stockListEl = document.getElementById('stock-list');
-            const stocks = Array.from(stockListEl.children).map(el => el.dataset.symbol);
-            
-            for (const symbol of stocks) {
-                const data = await fetchStockPrice(symbol);
-                if (data) {
-                    const stockEl = stockListEl.querySelector(`[data-symbol="${symbol}"]`);
-                    if (stockEl) {
-                        const priceEl = stockEl.querySelector('.text-right .font-semibold');
-                        const changeEl = stockEl.querySelector('.text-right .text-xs');
-                        
-                        priceEl.textContent = `$${formatPrice(data.price)}`;
-                        changeEl.textContent = `${data.isPositive ? '+' : ''}${formatChange(data.change)} (${formatChange(data.changePercent, true)})`;
-                        changeEl.className = `text-xs ${data.isPositive ? 'text-positive' : 'text-negative'}`;
-                    }
-                }
+        function displaySearchResults(results) {
+            const searchResults = document.getElementById('search-results');
+            if (!searchResults) return;
+
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="p-4 text-gray-500">No results found</div>';
+                searchResults.classList.remove('hidden');
+                return;
             }
-        }
 
-        // Function to update buy/sell prices
-        async function updateBuySellPrices() {
-            const data = await fetchStockPrice(currentSymbol);
-            if (data) {
-                document.getElementById('detail-sell-price').textContent = `$${formatPrice(data.price)}`;
-                document.getElementById('detail-buy-price').textContent = `$${formatPrice(data.price + 0.03)}`;
-            }
-        }
-
-        // Function to update user balance
-        async function updateBalance() {
-            try {
-                const userId = document.getElementById('user-id').dataset.userId;
-                if (!userId) {
-                    console.error('User ID not found');
-                    return;
-                }
-
-                const response = await fetch(`/api/user/${userId}/balance`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                const balanceElement = document.getElementById('balance');
-                
-                if (data.balance !== undefined) {
-                    const formattedBalance = parseFloat(data.balance).toFixed(2);
-                    balanceElement.textContent = formattedBalance;
-                } else {
-                    console.error('Balance not found in response:', data);
-                    balanceElement.textContent = "0.00";
-                }
-            } catch (error) {
-                console.error('Error updating balance:', error);
-                const balanceElement = document.getElementById('balance');
-                balanceElement.textContent = "0.00";
-            }
-        }
-
-        // Initialize real-time updates
-        function initializeRealTimeUpdates() {
-            // Update stock prices every 30 seconds
-            setInterval(updateStockPrices, PRICE_UPDATE_INTERVAL);
-            
-            // Update chart every 30 seconds
-            setInterval(() => updateChart(), CHART_UPDATE_INTERVAL);
-            
-            // Update buy/sell prices every 30 seconds
-            setInterval(updateBuySellPrices, PRICE_UPDATE_INTERVAL);
-            
-            // Update balance every 5 seconds
-            setInterval(updateBalance, 5000);
-
-            // Initial updates
-            updateStockPrices();
-            updateChart();
-            updateBuySellPrices();
-            updateBalance();
-        }
-
-        // Function to create a stock element
-        function createStockElement(stock) {
-            const div = document.createElement('div');
-            div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
-            div.setAttribute('data-symbol', stock.symbol);
-            
-            div.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 flex-shrink-0">
-                            <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+            searchResults.innerHTML = results.map(stock => `
+                <div class="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0" onclick="selectStock('${stock.symbol}')">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 flex-shrink-0">
+                                <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                            </div>
+                            <div>
+                                <div class="font-medium">${stock.name}</div>
+                                <div class="text-sm text-gray-400">${stock.symbol}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-medium">${stock.name}</div>
-                            <div class="text-sm text-gray-400">${stock.symbol}</div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-semibold">$${formatPrice(stock.price)}</div>
-                        <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
-                            ${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)} (${stock.isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}%)
+                        <div class="text-right">
+                            <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                            <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                            </div>
                         </div>
                     </div>
                 </div>
-            `;
-            
-            div.addEventListener('click', () => {
-                showStockDetail(stock);
-            });
-            
-            return div;
+            `).join('');
+
+            searchResults.classList.remove('hidden');
         }
 
-        // Function to show stock detail and scroll to it
-        function showStockDetail(stock) {
-            const detailSection = document.getElementById('stock-detail');
-            detailSection.classList.remove('hidden');
-            detailSection.classList.add('md:flex');
+        function selectStock(symbol) {
+            const searchInput = document.getElementById('stock-search');
+            const searchResults = document.getElementById('search-results');
             
-            document.getElementById('detail-name').textContent = stock.name;
-            document.getElementById('detail-symbol').textContent = stock.symbol;
-            
-            const changeElement = document.getElementById('detail-change');
-            const changeText = `${stock.isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}% (${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)})`;
-            changeElement.textContent = changeText;
-            changeElement.className = stock.isPositive ? 'text-positive' : 'text-negative';
-            
-            document.getElementById('detail-sell-price').textContent = `$${formatPrice(stock.price)}`;
-            document.getElementById('detail-buy-price').textContent = `$${formatPrice(stock.price + 0.03)}`;
-            
-            // Update chart
-            updateChart(stock.symbol);
-            
-            // Show all stocks again
-            const stockList = document.getElementById('stock-list');
-            const allStocks = Array.from(stockList.children);
-            allStocks.forEach(stock => {
-                if (stock.classList.contains('text-gray-500')) return; // Skip "No stocks found" message
-                stock.style.display = 'block';
-            });
-            
-            // Remove "No stocks found" message if it exists
-            const noResults = stockList.querySelector('.text-gray-500');
-            if (noResults) {
-                noResults.remove();
+            if (searchInput) {
+                searchInput.value = symbol;
             }
             
-            // Find and scroll to the selected stock
-            const selectedStock = stockList.querySelector(`[data-symbol="${stock.symbol}"]`);
-            if (selectedStock) {
-                // Remove active class from all items
-                allStocks.forEach(item => {
-                    if (item.classList.contains('text-gray-500')) return; // Skip "No stocks found" message
-                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
-                });
-                
-                // Add active class to selected item
-                selectedStock.classList.add('bg-primary/10', 'dark:bg-primary/20');
-                
-                // Scroll the selected item into view
-                selectedStock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (searchResults) {
+                searchResults.classList.add('hidden');
+            }
+            
+            // Find the stock in the default stocks list
+            const stock = defaultStocks.find(s => s.symbol === symbol);
+            if (stock) {
+                showStockDetail(stock);
+            } else {
+                showError('Stock not found');
             }
         }
 
@@ -1099,199 +909,25 @@
             return price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        // Function to generate sample chart data
-        function generateChartData(days) {
-            const data = [];
-            let price = 100;
-            const now = new Date();
+        // Function to show stock detail
+        function showStockDetail(stock) {
+            const detailSection = document.getElementById('stock-detail');
+            if (!detailSection) return;
             
-            for (let i = days; i >= 0; i--) {
-                const date = new Date(now);
-                date.setDate(date.getDate() - i);
-                
-                const open = price * (1 + (Math.random() - 0.5) * 0.02);
-                const close = open * (1 + (Math.random() - 0.5) * 0.02);
-                const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-                const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-                
-                data.push({
-                    x: date,
-                    o: open,
-                    h: high,
-                    l: low,
-                    c: close
-                });
-                
-                price = close;
-            }
+            detailSection.classList.remove('hidden');
+            detailSection.classList.add('md:flex');
             
-            return data;
-        }
-
-        // Function to update chart
-        function updateChart(symbol, days = 30) {
-            const chartData = generateChartData(days);
-            const trace = {
-                x: chartData.map(d => d.x),
-                open: chartData.map(d => d.o),
-                high: chartData.map(d => d.h),
-                low: chartData.map(d => d.l),
-                close: chartData.map(d => d.c),
-                type: 'candlestick',
-                xaxis: 'x',
-                yaxis: 'y',
-                name: symbol,
-                increasing: {
-                    line: { color: '#16c784' },
-                    fillcolor: '#16c784'
-                },
-                decreasing: {
-                    line: { color: '#ea3943' },
-                    fillcolor: '#ea3943'
-                }
-            };
-
-            // Determine tick format based on days
-            let tickFormat;
-            let tickInterval;
-            switch(days) {
-                case 1: // 1D
-                    tickFormat = '%H:%M';
-                    tickInterval = 4 * 60 * 60 * 1000; // 4 hours
-                    break;
-                case 7: // 1W
-                    tickFormat = '%d\n%H:%M';
-                    tickInterval = 12 * 60 * 60 * 1000; // 12 hours
-                    break;
-                case 30: // 1M
-                    tickFormat = '%b';
-                    tickInterval = 24 * 60 * 60 * 1000; // 1 day
-                    break;
-                case 90: // 3M
-                    tickFormat = '%b\n%Y';
-                    tickInterval = 30 * 24 * 60 * 60 * 1000; // 1 month
-                    break;
-                case 365: // 1Y
-                    tickFormat = '%b\n%Y';
-                    tickInterval = 30 * 24 * 60 * 60 * 1000; // 1 month
-                    break;
-                default: // MAX
-                    tickFormat = '%Y';
-                    tickInterval = 365 * 24 * 60 * 60 * 1000; // 1 year
-                    break;
-            }
-
-            const layout = {
-                template: 'plotly_dark',
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                margin: { t: 20, b: 40, l: 40, r: 40 },
-                xaxis: {
-                    rangeslider: { visible: false },
-                    color: 'rgba(156, 163, 175, 0.8)',
-                    showgrid: false,
-                    showticklabels: true,
-                    tickangle: -45,
-                    tickformat: tickFormat,
-                    dtick: tickInterval,
-                    tickmode: 'auto'
-                },
-                yaxis: {
-                    color: 'rgba(156, 163, 175, 0.8)',
-                    side: 'right',
-                    showgrid: false,
-                    showticklabels: true
-                },
-                showlegend: false,
-                height: 300
-            };
-
-            const config = {
-                responsive: true,
-                displayModeBar: false
-            };
-
-            Plotly.newPlot('stock-chart', [trace], layout, config);
-
-            // Add event listeners for time period buttons
-            const timeButtons = document.querySelectorAll('.time-button');
-            timeButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    // Remove active class from all buttons
-                    timeButtons.forEach(btn => btn.classList.remove('time-active'));
-                    // Add active class to clicked button
-                    button.classList.add('time-active');
-                    
-                    // Get the time period from the button text
-                    const period = button.textContent;
-                    let days;
-                    switch(period) {
-                        case '1D': days = 1; break;
-                        case '1W': days = 7; break;
-                        case '1M': days = 30; break;
-                        case '3M': days = 90; break;
-                        case '1Y': days = 365; break;
-                        case 'MAX': days = 365 * 5; break;
-                    }
-                    
-                    // Update chart with new time period
-                    const currentSymbol = document.getElementById('detail-symbol').textContent;
-                    updateChart(currentSymbol, days);
-                });
-            });
-        }
-
-        // Function to create a search result element
-        function createSearchResultElement(stock) {
-            const div = document.createElement('div');
-            div.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer';
-            div.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 flex-shrink-0">
-                            <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
-                        </div>
-                        <div>
-                            <div class="font-medium">${stock.name}</div>
-                            <div class="text-sm text-gray-400">${stock.symbol}</div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-semibold">$${formatPrice(stock.price)}</div>
-                        <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
-                            ${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)} (${stock.isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}%)
-                        </div>
-                    </div>
-                </div>
-            `;
+            document.getElementById('detail-name').textContent = stock.name;
+            document.getElementById('detail-symbol').textContent = stock.symbol;
             
-            div.addEventListener('click', () => {
-                // Hide search results
-                document.getElementById('search-results').classList.add('hidden');
-                
-                // Clear search input
-                document.getElementById('stock-search').value = '';
-                
-                // Find and highlight the stock in the main list
-                const stockList = document.getElementById('stock-list');
-                const stockElement = stockList.querySelector(`[data-symbol="${stock.symbol}"]`);
-                
-                if (stockElement) {
-                    // Remove active class from all items
-                    stockList.querySelectorAll('div').forEach(item => {
-                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
-                    });
-                    
-                    // Add active class to selected item
-                    stockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
-                    
-                    // Scroll the selected item into view
-                    stockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    // Show stock details
-                    showStockDetail(stock);
-                }
-            });
+            const changeElement = document.getElementById('detail-change');
+            const changeText = `${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}% (${stock.isPositive ? '+' : ''}${formatPrice(stock.change)})`;
+            changeElement.textContent = changeText;
+            changeElement.className = stock.isPositive ? 'text-positive' : 'text-negative';
             
-            return div;
+            document.getElementById('detail-sell-price').textContent = `$${formatPrice(stock.price)}`;
+            document.getElementById('detail-buy-price').textContent = `$${formatPrice(stock.price + 0.03)}`;
+            
+            // Update chart
+            updateChart(stock.symbol);
         }
