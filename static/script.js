@@ -886,6 +886,7 @@
         function selectStock(symbol) {
             const searchInput = document.getElementById('stock-search');
             const searchResults = document.getElementById('search-results');
+            const stockList = document.getElementById('stock-list');
             
             if (searchInput) {
                 searchInput.value = symbol;
@@ -898,6 +899,20 @@
             // Find the stock in the default stocks list
             const stock = defaultStocks.find(s => s.symbol === symbol);
             if (stock) {
+                // Remove active class from all items in the stock list
+                document.querySelectorAll('#stock-list > div').forEach(item => {
+                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                });
+                
+                // Find and highlight the selected stock in the list
+                const selectedStockElement = stockList.querySelector(`[data-symbol="${symbol}"]`);
+                if (selectedStockElement) {
+                    selectedStockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                    // Scroll the selected stock into view
+                    selectedStockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Show stock details
                 showStockDetail(stock);
             } else {
                 showError('Stock not found');
