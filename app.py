@@ -217,6 +217,15 @@ def init_supabase_db():
                         terms BOOLEAN NOT NULL,
                         balance DECIMAL(10,2) DEFAULT 0.00,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS watchlist (
+                        watchlist_id TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        watchlist_name TEXT NOT NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(user_id))''')
+    
     conn.commit()
     conn.close()
 
@@ -251,6 +260,13 @@ def signup_user(email, password, first_name, last_name, terms):
         INSERT INTO users (user_id, email, first_name, last_name, password_hash, terms, created_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (user_id, email, first_name, last_name, hashed_password, terms, current_timestamp))
+    
+    # Create default watchlist for the user
+    watchlist_id = str(uuid.uuid4())
+    cursor.execute("""
+        INSERT INTO watchlist (watchlist_id, user_id, watchlist_name, created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (watchlist_id, user_id, "My Watchlist", current_timestamp, current_timestamp))
     
     conn.commit()
     conn.close()
