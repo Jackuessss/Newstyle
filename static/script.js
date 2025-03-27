@@ -77,6 +77,42 @@
         
         // Initialize immediately when script loads
         document.addEventListener('DOMContentLoaded', async () => {
+            // Theme toggle functionality
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = themeToggle.querySelector('svg');
+            
+            // Check for saved theme preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+                updateThemeIcon(savedTheme === 'dark');
+            } else {
+                // Check system preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.classList.toggle('dark', prefersDark);
+                updateThemeIcon(prefersDark);
+            }
+            
+            // Theme toggle click handler
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeIcon(isDark);
+            });
+            
+            // Function to update theme icon
+            function updateThemeIcon(isDark) {
+                if (isDark) {
+                    themeIcon.innerHTML = `
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    `;
+                } else {
+                    themeIcon.innerHTML = `
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    `;
+                }
+            }
+            
             // Set the title (remove "Stocks" text, just show the icon)
             const watchlistHeader = document.getElementById('watchlist-header');
             if (watchlistHeader) {
@@ -579,6 +615,9 @@
                         chart.innerHTML = '<div class="text-gray-400">Error loading chart data</div>';
                     });
             }
+
+            // Set initial active state
+            stocksNav.classList.add('text-primary');
         });
         
         /**
