@@ -295,7 +295,20 @@ def signup():
         flash(message)
 
         if 'Signup successful!' in message:
-            return render_template('dashboard.html')
+            # Create a browser session for the new user
+            user_data = authenticate_user(email, password)
+            if user_data:
+                user = User(user_data[0], user_data[1], user_data[2], user_data[3])
+                login_user(user)
+                session.permanent = False  # Session lasts until browser closes
+                session['user_id'] = user_data[0]
+                session['email'] = email
+                flash('Account created and logged in successfully!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Account created but login failed. Please log in manually.', 'warning')
+                return redirect(url_for('login'))
+                
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -541,6 +554,32 @@ def get_forex_history(symbol):
             return jsonify({'error': 'Unable to fetch forex history'}), 400
             
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/user/<int:user_id>/balance')
+@login_required
+def get_user_balance(user_id):
+    try:
+        # Ensure the user can only access their own balance
+        if user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
+        # Get user's balance from Supabase database
+        conn = get_supabase_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT balance FROM users WHERE user_id = %s', (user_id,))
+        result = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if result and result[0] is not None:
+            return jsonify({'balance': float(result[0])})
+        else:
+            return jsonify({'balance': 0.00})
+            
+    except Exception as e:
+        print(f"Error fetching balance: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

@@ -77,6 +77,21 @@
         
         // Initialize immediately when script loads
         document.addEventListener('DOMContentLoaded', async () => {
+            // Fetch user balance
+            const userId = document.getElementById('user-id').dataset.userId;
+            try {
+                const response = await fetch(`/api/user/${userId}/balance`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const balanceElement = document.getElementById('balance');
+                    if (balanceElement) {
+                        balanceElement.textContent = parseFloat(data.balance).toFixed(2);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user balance:', error);
+            }
+            
             // Theme toggle functionality
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = themeToggle.querySelector('svg');
@@ -805,7 +820,7 @@
                     return;
                 }
 
-                const response = await fetch(`/get_balance/${userId}`);
+                const response = await fetch(`/api/user/${userId}/balance`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -838,8 +853,8 @@
             // Update buy/sell prices every 30 seconds
             setInterval(updateBuySellPrices, PRICE_UPDATE_INTERVAL);
             
-            // Update balance every second
-            setInterval(updateBalance, 1000);
+            // Update balance every 5 seconds
+            setInterval(updateBalance, 5000);
 
             // Initial updates
             updateStockPrices();
