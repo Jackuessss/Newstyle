@@ -627,5 +627,38 @@ def get_user_balance(user_id):
         print(f"Error fetching balance: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/watchlists/<user_id>')
+@login_required
+def get_user_watchlists(user_id):
+    try:
+        # Ensure the user can only access their own watchlists
+        if user_id != current_user.id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        conn = get_supabase_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT watchlist_id, watchlist_name, created_at, updated_at 
+            FROM watchlist 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, (user_id,))
+        watchlists = cursor.fetchall()
+        conn.close()
+
+        # Convert the results to a list of dictionaries
+        watchlist_data = []
+        for watchlist in watchlists:
+            watchlist_data.append({
+                'watchlist_id': watchlist[0],
+                'watchlist_name': watchlist[1],
+                'created_at': watchlist[2].isoformat(),
+                'updated_at': watchlist[3].isoformat()
+            })
+
+        return jsonify(watchlist_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
