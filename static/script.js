@@ -398,37 +398,54 @@
             // Handle main search input
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
+                const query = e.target.value.trim().toLowerCase();
+                const stockList = document.getElementById('stock-list');
+                const allStocks = Array.from(stockList.children);
                 
                 if (query.length < 2) {
-                    searchResults.classList.add('hidden');
+                    // Show all stocks if query is too short
+                    allStocks.forEach(stock => {
+                        stock.style.display = 'block';
+                    });
                     return;
                 }
                 
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`/api/search?q=${query}`);
-                        const data = await response.json();
+                searchTimeout = setTimeout(() => {
+                    // Filter stocks based on query
+                    allStocks.forEach(stock => {
+                        const symbol = stock.dataset.symbol.toLowerCase();
+                        const name = stock.querySelector('.font-medium').textContent.toLowerCase();
                         
-                        if (data.error) {
-                            showError(data.error);
-                            return;
-                        }
-                        
-                        searchResults.innerHTML = '';
-                        if (data.bestMatches && data.bestMatches.length > 0) {
-                            data.bestMatches.forEach(result => {
-                                searchResults.appendChild(createSearchResultElement(result));
-                            });
-                            searchResults.classList.remove('hidden');
+                        if (symbol.includes(query) || name.includes(query)) {
+                            stock.style.display = 'block';
                         } else {
-                            searchResults.classList.add('hidden');
+                            stock.style.display = 'none';
                         }
-                    } catch (error) {
-                        console.error('Error searching stocks:', error);
-                        showError('Failed to search stocks');
+                    });
+                    
+                    // Check if any stocks are visible
+                    const visibleStocks = allStocks.filter(stock => stock.style.display !== 'none');
+                    if (visibleStocks.length === 0) {
+                        // Show "No stocks found" message
+                        const noResults = document.createElement('div');
+                        noResults.className = 'p-4 text-center text-gray-500 dark:text-gray-400';
+                        noResults.textContent = 'No stocks found matching your search';
+                        
+                        // Remove any existing "No stocks found" message
+                        const existingNoResults = stockList.querySelector('.text-gray-500');
+                        if (existingNoResults) {
+                            existingNoResults.remove();
+                        }
+                        
+                        stockList.appendChild(noResults);
+                    } else {
+                        // Remove "No stocks found" message if it exists
+                        const noResults = stockList.querySelector('.text-gray-500');
+                        if (noResults) {
+                            noResults.remove();
+                        }
                     }
-                }, SEARCH_DELAY); // Increased delay for search
+                }, 300);
             });
             
             // Close search results when clicking outside
@@ -1020,19 +1037,13 @@
             `;
             
             div.addEventListener('click', () => {
-                // Remove active class from all items
-                document.querySelectorAll('#stock-list > div').forEach(item => {
-                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
-                });
-                // Add active class to clicked item
-                div.classList.add('bg-primary/10', 'dark:bg-primary/20');
                 showStockDetail(stock);
             });
             
             return div;
         }
 
-        // Function to show stock detail
+        // Function to show stock detail and scroll to it
         function showStockDetail(stock) {
             const detailSection = document.getElementById('stock-detail');
             detailSection.classList.remove('hidden');
@@ -1051,6 +1062,36 @@
             
             // Update chart
             updateChart(stock.symbol);
+            
+            // Show all stocks again
+            const stockList = document.getElementById('stock-list');
+            const allStocks = Array.from(stockList.children);
+            allStocks.forEach(stock => {
+                if (stock.classList.contains('text-gray-500')) return; // Skip "No stocks found" message
+                stock.style.display = 'block';
+            });
+            
+            // Remove "No stocks found" message if it exists
+            const noResults = stockList.querySelector('.text-gray-500');
+            if (noResults) {
+                noResults.remove();
+            }
+            
+            // Find and scroll to the selected stock
+            const selectedStock = stockList.querySelector(`[data-symbol="${stock.symbol}"]`);
+            if (selectedStock) {
+                // Remove active class from all items
+                allStocks.forEach(item => {
+                    if (item.classList.contains('text-gray-500')) return; // Skip "No stocks found" message
+                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                });
+                
+                // Add active class to selected item
+                selectedStock.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                
+                // Scroll the selected item into view
+                selectedStock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         // Function to format price
@@ -1198,4 +1239,59 @@
                     updateChart(currentSymbol, days);
                 });
             });
+        }
+
+        // Function to create a search result element
+        function createSearchResultElement(stock) {
+            const div = document.createElement('div');
+            div.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer';
+            div.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 flex-shrink-0">
+                            <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <div class="font-medium">${stock.name}</div>
+                            <div class="text-sm text-gray-400">${stock.symbol}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                        <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                            ${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)} (${stock.isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}%)
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            div.addEventListener('click', () => {
+                // Hide search results
+                document.getElementById('search-results').classList.add('hidden');
+                
+                // Clear search input
+                document.getElementById('stock-search').value = '';
+                
+                // Find and highlight the stock in the main list
+                const stockList = document.getElementById('stock-list');
+                const stockElement = stockList.querySelector(`[data-symbol="${stock.symbol}"]`);
+                
+                if (stockElement) {
+                    // Remove active class from all items
+                    stockList.querySelectorAll('div').forEach(item => {
+                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                    });
+                    
+                    // Add active class to selected item
+                    stockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                    
+                    // Scroll the selected item into view
+                    stockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Show stock details
+                    showStockDetail(stock);
+                }
+            });
+            
+            return div;
         }
