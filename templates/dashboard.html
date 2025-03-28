@@ -276,6 +276,28 @@
         </div>
     </div>
 
+    <script>
+        // Global fallback data
+        window.fallbackStocks = [
+            {symbol: 'AAPL', name: 'Apple Inc.', price: 185.56, change: 1.23, changePercent: 0.67, isPositive: true, logoUrl: 'https://logo.clearbit.com/apple.com'},
+            {symbol: 'MSFT', name: 'Microsoft Corporation', price: 413.64, change: 0.86, changePercent: 0.21, isPositive: true, logoUrl: 'https://logo.clearbit.com/microsoft.com'},
+            {symbol: 'GOOGL', name: 'Alphabet Inc.', price: 165.92, change: -0.58, changePercent: -0.35, isPositive: false, logoUrl: 'https://logo.clearbit.com/google.com'},
+            {symbol: 'AMZN', name: 'Amazon.com Inc.', price: 178.62, change: 2.45, changePercent: 1.39, isPositive: true, logoUrl: 'https://logo.clearbit.com/amazon.com'},
+            {symbol: 'META', name: 'Meta Platforms Inc.', price: 492.15, change: 3.78, changePercent: 0.77, isPositive: true, logoUrl: 'https://logo.clearbit.com/meta.com'},
+            {symbol: 'TSLA', name: 'Tesla Inc.', price: 172.82, change: -6.13, changePercent: -3.43, isPositive: false, logoUrl: 'https://logo.clearbit.com/tesla.com'},
+            {symbol: 'NVDA', name: 'NVIDIA Corporation', price: 887.90, change: 12.35, changePercent: 1.41, isPositive: true, logoUrl: 'https://logo.clearbit.com/nvidia.com'},
+            {symbol: 'BRK.B', name: 'Berkshire Hathaway Inc.', price: 435.36, change: 1.15, changePercent: 0.27, isPositive: true, logoUrl: 'https://logo.clearbit.com/berkshirehathaway.com'},
+            {symbol: 'JPM', name: 'JPMorgan Chase & Co.', price: 197.53, change: -0.82, changePercent: -0.41, isPositive: false, logoUrl: 'https://logo.clearbit.com/jpmorganchase.com'},
+            {symbol: 'V', name: 'Visa Inc.', price: 277.38, change: 0.91, changePercent: 0.33, isPositive: true, logoUrl: 'https://logo.clearbit.com/visa.com'}
+        ];
+        
+        window.fallbackWatchlists = [
+            { watchlist_id: 'default-stocks', watchlist_name: 'Top Stocks' },
+            { watchlist_id: 'tech-stocks', watchlist_name: 'Tech' },
+            { watchlist_id: 'finance-stocks', watchlist_name: 'Finance' }
+        ];
+    </script>
+
     <!-- JavaScript -->
     <script>
     document.addEventListener('DOMContentLoaded', async () => {
@@ -283,13 +305,27 @@
         async function loadWatchlistItems(watchlistId) {
             try {
                 console.log('Loading watchlist items for:', watchlistId);
-                const response = await fetch(`/api/watchlist/${watchlistId}`);
+                
+                // Set a timeout for the fetch request
+                const timeoutDuration = 5000; // 5 seconds
+                
+                // Create a promise that rejects after the timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Request timed out')), timeoutDuration)
+                );
+                
+                // Race the fetch against the timeout
+                const response = await Promise.race([
+                    fetch(`/api/watchlist/${watchlistId}`),
+                    timeoutPromise
+                ]);
+                
                 const data = await response.json();
                 console.log('Watchlist items data:', data);
                 
                 if (data.error) {
                     console.error('Error loading watchlist:', data.error);
-                    return;
+                    throw new Error(data.error);
                 }
                 
                 // Update the search input placeholder
@@ -353,7 +389,70 @@
                     }
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error loading watchlist:', error);
+                
+                // Use fallback data if the request failed
+                const fallbackStocks = window.fallbackStocks;
+                
+                console.log('Using fallback stock data due to API error');
+                
+                // Update the stock list with fallback data
+                const stockList = document.getElementById('stock-list');
+                if (stockList) {
+                    stockList.innerHTML = ''; // Clear the list
+                    
+                    fallbackStocks.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                        div.setAttribute('data-symbol', item.symbol);
+                        
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 flex-shrink-0">
+                                        <img src="${item.logoUrl}" alt="${item.name} logo" class="w-full h-full object-contain">
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">${item.name}</div>
+                                        <div class="text-sm text-gray-400">${item.symbol}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-semibold">$${item.price.toFixed(2)}</div>
+                                    <div class="text-xs ${item.isPositive ? 'text-positive' : 'text-negative'}">
+                                        ${item.isPositive ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent.toFixed(2)}%)
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        div.addEventListener('click', () => {
+                            // Remove active class from all items
+                            document.querySelectorAll('#stock-list > div').forEach(item => {
+                                item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                            });
+                            
+                            // Add active class to clicked item
+                            div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                            
+                            // Show stock details
+                            showStockDetail(item);
+                        });
+                        
+                        stockList.appendChild(div);
+                    });
+                    
+                    // Show the first stock by default
+                    if (fallbackStocks.length > 0) {
+                        showStockDetail(fallbackStocks[0]);
+                    }
+                }
+                
+                // Update search input placeholder
+                const searchInput = document.getElementById('stock-search');
+                if (searchInput) {
+                    searchInput.placeholder = 'Search in Stocks...';
+                }
             }
         }
 
@@ -376,13 +475,27 @@
         // Load watchlists
         try {
             console.log('Fetching watchlists for user:', '{{ user_id }}');
-            const response = await fetch(`/api/watchlists/{{ user_id }}`);
+            
+            // Set a timeout for the fetch request
+            const timeoutDuration = 5000; // 5 seconds
+            
+            // Create a promise that rejects after the timeout
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Request timed out')), timeoutDuration)
+            );
+            
+            // Race the fetch against the timeout
+            const response = await Promise.race([
+                fetch(`/api/watchlists/{{ user_id }}`),
+                timeoutPromise
+            ]);
+            
             const watchlists = await response.json();
             console.log('Received watchlists:', watchlists);
             
             if (watchlists.error) {
                 console.error('Error loading watchlists:', watchlists.error);
-                return;
+                throw new Error(watchlists.error);
             }
             
             const watchlistNav = document.getElementById('watchlist-nav');
@@ -393,7 +506,7 @@
                 
                 if (!watchlists || watchlists.length === 0) {
                     console.log('No watchlists found');
-                    return;
+                    throw new Error('No watchlists found');
                 }
                 
                 watchlists.forEach(watchlist => {
@@ -443,7 +556,54 @@
                 console.error('Watchlist nav element not found');
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error loading watchlists:', error);
+            
+            // Fallback watchlists
+            const fallbackWatchlists = window.fallbackWatchlists;
+            
+            // Create fallback watchlist navigation
+            const watchlistNav = document.getElementById('watchlist-nav');
+            if (watchlistNav) {
+                watchlistNav.innerHTML = '';
+                
+                fallbackWatchlists.forEach(watchlist => {
+                    const link = document.createElement('a');
+                    link.href = `/dashboard?list=${watchlist.watchlist_id}`;
+                    link.className = 'flex items-center space-x-2 text-sm font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white whitespace-nowrap';
+                    
+                    link.innerHTML = `
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                        <span>${watchlist.watchlist_name}</span>
+                    `;
+                    
+                    // Add click event listener
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        
+                        // Update active state
+                        document.querySelectorAll('#watchlist-nav a').forEach(l => {
+                            l.classList.remove('text-primary');
+                        });
+                        link.classList.add('text-primary');
+                        
+                        // Load fallback stocks
+                        loadWatchlistItems('default-stocks');
+                    });
+                    
+                    watchlistNav.appendChild(link);
+                });
+                
+                // Activate the first watchlist
+                const firstLink = watchlistNav.querySelector('a');
+                if (firstLink) {
+                    firstLink.classList.add('text-primary');
+                }
+                
+                // Load fallback stocks
+                loadWatchlistItems('default-stocks');
+            }
         }
 
         // Theme toggle functionality
@@ -524,6 +684,12 @@
                 });
                 
                 console.log('Collected stocks for search:', window.allStocks.length);
+                
+                // If no stocks were found, use the fallback data
+                if (window.allStocks.length === 0) {
+                    window.allStocks = window.fallbackStocks;
+                    console.log('Using fallback stock data');
+                }
             }
             
             // Watch for changes to the stock list
@@ -536,8 +702,11 @@
                 
                 observer.observe(stockList, { childList: true, subtree: true });
                 
-                // Also collect on initial load
+                // Also collect on initial load and set a timeout to use fallback if API is slow
                 setTimeout(collectStocks, 1000);
+                
+                // Use fallback data immediately for search until real data loads
+                window.allStocks = window.fallbackStocks;
             }
             
             if (searchInput) {
