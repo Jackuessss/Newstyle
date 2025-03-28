@@ -1,0 +1,167 @@
+{
+  "default-stocks": {
+    "watchlist_name": "Stocks",
+    "items": [
+      {
+        "symbol": "TSLA",
+        "name": "Tesla",
+        "logoUrl": "https://logo.clearbit.com/tesla.com"
+      },
+      {
+        "symbol": "NVDA",
+        "name": "NVIDIA",
+        "logoUrl": "https://logo.clearbit.com/nvidia.com"
+      },
+      {
+        "symbol": "MIGO",
+        "name": "MicroAlgo",
+        "logoUrl": "https://logo.clearbit.com/microalgo.com"
+      },
+      {
+        "symbol": "PLTR",
+        "name": "Palantir Technologies",
+        "logoUrl": "https://logo.clearbit.com/palantir.com"
+      },
+      {
+        "symbol": "MSTR",
+        "name": "MicroStrategy",
+        "logoUrl": "https://logo.clearbit.com/microstrategy.com"
+      },
+      {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "logoUrl": "https://logo.clearbit.com/apple.com"
+      },
+      {
+        "symbol": "MSFT",
+        "name": "Microsoft Corporation",
+        "logoUrl": "https://logo.clearbit.com/microsoft.com"
+      },
+      {
+        "symbol": "GOOGL",
+        "name": "Alphabet Inc.",
+        "logoUrl": "https://logo.clearbit.com/google.com"
+      },
+      {
+        "symbol": "AMZN",
+        "name": "Amazon.com Inc.",
+        "logoUrl": "https://logo.clearbit.com/amazon.com"
+      },
+      {
+        "symbol": "META",
+        "name": "Meta Platforms Inc.",
+        "logoUrl": "https://logo.clearbit.com/meta.com"
+      },
+      {
+        "symbol": "AMD",
+        "name": "Advanced Micro Devices",
+        "logoUrl": "https://logo.clearbit.com/amd.com"
+      },
+      {
+        "symbol": "INTC",
+        "name": "Intel Corporation",
+        "logoUrl": "https://logo.clearbit.com/intel.com"
+      },
+      {
+        "symbol": "TSM",
+        "name": "Taiwan Semiconductor",
+        "logoUrl": "https://logo.clearbit.com/tsmc.com"
+      },
+      {
+        "symbol": "ASML",
+        "name": "ASML Holding",
+        "logoUrl": "https://logo.clearbit.com/asml.com"
+      },
+      {
+        "symbol": "AVGO",
+        "name": "Broadcom Inc.",
+        "logoUrl": "https://logo.clearbit.com/broadcom.com"
+      },
+      {
+        "symbol": "TXN",
+        "name": "Texas Instruments",
+        "logoUrl": "https://logo.clearbit.com/ti.com"
+      },
+      {
+        "symbol": "QCOM",
+        "name": "Qualcomm Inc.",
+        "logoUrl": "https://logo.clearbit.com/qualcomm.com"
+      },
+      {
+        "symbol": "MU",
+        "name": "Micron Technology",
+        "logoUrl": "https://logo.clearbit.com/micron.com"
+      },
+      {
+        "symbol": "ADI",
+        "name": "Analog Devices",
+        "logoUrl": "https://logo.clearbit.com/analog.com"
+      },
+      {
+        "symbol": "CRM",
+        "name": "Salesforce Inc.",
+        "logoUrl": "https://logo.clearbit.com/salesforce.com"
+      }
+    ]
+  },
+  "default-forex": {
+    "watchlist_name": "Forex",
+    "items": [
+      {
+        "symbol": "EUR/USD",
+        "name": "Euro/US Dollar",
+        "logoUrl": "https://logo.clearbit.com/ecb.europa.eu"
+      },
+      {
+        "symbol": "GBP/USD",
+        "name": "British Pound/US Dollar",
+        "logoUrl": "https://logo.clearbit.com/bankofengland.co.uk"
+      },
+      {
+        "symbol": "USD/JPY",
+        "name": "US Dollar/Japanese Yen",
+        "logoUrl": "https://logo.clearbit.com/boj.or.jp"
+      },
+      {
+        "symbol": "USD/CAD",
+        "name": "US Dollar/Canadian Dollar",
+        "logoUrl": "https://logo.clearbit.com/bankofcanada.ca"
+      },
+      {
+        "symbol": "AUD/USD",
+        "name": "Australian Dollar/US Dollar",
+        "logoUrl": "https://logo.clearbit.com/rba.gov.au"
+      }
+    ]
+  },
+  "default-global": {
+    "watchlist_name": "Global Market",
+    "items": [
+      {
+        "symbol": "^GSPC",
+        "name": "S&P 500",
+        "logoUrl": "https://logo.clearbit.com/spglobal.com"
+      },
+      {
+        "symbol": "^DJI",
+        "name": "Dow Jones Industrial Average",
+        "logoUrl": "https://logo.clearbit.com/spglobal.com"
+      },
+      {
+        "symbol": "^IXIC",
+        "name": "NASDAQ Composite",
+        "logoUrl": "https://logo.clearbit.com/nasdaq.com"
+      },
+      {
+        "symbol": "^FTSE",
+        "name": "FTSE 100",
+        "logoUrl": "https://logo.clearbit.com/lseg.com"
+      },
+      {
+        "symbol": "^N225",
+        "name": "Nikkei 225",
+        "logoUrl": "https://logo.clearbit.com/jpx.co.jp"
+      }
+    ]
+  }
+} 

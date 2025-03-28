@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from supabase import create_client, Client
 from psycopg2.extras import RealDictCursor
 import time
+import json
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +24,10 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "Jacques")
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Path to static JSON files
+DEFAULT_LISTS_JSON = os.path.join('static', 'default_lists.json')
+DEFAULT_LISTS_META_JSON = os.path.join('static', 'default_lists_meta.json')
 
 # User class for Flask-Login
 class User(UserMixin):
@@ -798,14 +803,6 @@ def get_user_watchlists(user_id):
         """, (user_id,))
         user_watchlists = cursor.fetchall()
         
-        # Get default lists from default_lists table
-        cursor.execute("""
-            SELECT default_list_id, default_list_name
-            FROM default_lists
-            ORDER BY default_list_id
-        """)
-        default_lists = cursor.fetchall()
-        
         conn.close()
 
         # Convert the results to a list of dictionaries
@@ -821,15 +818,20 @@ def get_user_watchlists(user_id):
                 'is_default': False
             })
             
-        # Add default lists
-        for default_list in default_lists:
-            watchlist_data.append({
-                'watchlist_id': default_list[0],
-                'watchlist_name': default_list[1],
-                'created_at': datetime.utcnow().isoformat(),  # Use current time for default lists
-                'updated_at': datetime.utcnow().isoformat(),  # Use current time for default lists
-                'is_default': True
-            })
+        # Add default lists from static JSON file
+        try:
+            with open(DEFAULT_LISTS_META_JSON, 'r') as f:
+                default_lists = json.load(f)
+                watchlist_data.extend(default_lists)
+        except Exception as e:
+            print(f"Error loading default lists: {e}")
+            # Fallback to hardcoded default lists
+            default_lists = [
+                {"watchlist_id": "default-stocks", "watchlist_name": "Stocks", "is_default": True},
+                {"watchlist_id": "default-forex", "watchlist_name": "Forex", "is_default": True},
+                {"watchlist_id": "default-global", "watchlist_name": "Global Market", "is_default": True}
+            ]
+            watchlist_data.extend(default_lists)
 
         return jsonify(watchlist_data)
     except Exception as e:
@@ -843,54 +845,91 @@ def get_watchlist_items(watchlist_id):
         if cached_data:
             return jsonify(cached_data)
 
-        conn = get_supabase_connection()
-        cursor = conn.cursor()
-        
         if watchlist_id.startswith('default-'):
-            # Get items from default list
-            cursor.execute("""
-                SELECT di.ticker, di.item_name, di.logo_url, di.default_list_id
-                FROM default_list_items di
-                WHERE di.default_list_id = %s
-                ORDER BY di.added_at
-            """, (watchlist_id,))
-            items = cursor.fetchall()
-            
-            # Get the default list name
-            cursor.execute("""
-                SELECT default_list_name
-                FROM default_lists
-                WHERE default_list_id = %s
-            """, (watchlist_id,))
-            list_name = cursor.fetchone()[0]
-            
-            # Get current prices for each stock
-            watchlist_items = []
-            for item in items:
-                quote_data = fetch_finnhub_quote(item[0])
-                if quote_data:
-                    watchlist_items.append({
-                        'symbol': item[0],
-                        'name': item[1],
-                        'price': quote_data['c'],
-                        'change': quote_data['d'],
-                        'changePercent': quote_data['dp'],
-                        'isPositive': quote_data['d'] >= 0,
-                        'logoUrl': item[2]
-                    })
-            
-            conn.close()
-            
-            response_data = {
-                'watchlist_name': list_name,
-                'items': watchlist_items
-            }
-            
-            # Cache the response
-            set_cached_watchlist(watchlist_id, response_data)
-            return jsonify(response_data)
+            # Get items from static JSON file
+            try:
+                with open(DEFAULT_LISTS_JSON, 'r') as f:
+                    default_lists = json.load(f)
+                    if watchlist_id in default_lists:
+                        list_data = default_lists[watchlist_id]
+                        # Get current prices for each stock
+                        watchlist_items = []
+                        for item in list_data['items']:
+                            quote_data = fetch_finnhub_quote(item['symbol'])
+                            if quote_data:
+                                watchlist_items.append({
+                                    'symbol': item['symbol'],
+                                    'name': item['name'],
+                                    'price': quote_data['c'],
+                                    'change': quote_data['d'],
+                                    'changePercent': quote_data['dp'],
+                                    'isPositive': quote_data['d'] >= 0,
+                                    'logoUrl': item['logoUrl']
+                                })
+                        
+                        response_data = {
+                            'watchlist_name': list_data['watchlist_name'],
+                            'items': watchlist_items
+                        }
+                        
+                        # Cache the response
+                        set_cached_watchlist(watchlist_id, response_data)
+                        return jsonify(response_data)
+                    else:
+                        return jsonify({'error': 'Default list not found'}), 404
+            except Exception as e:
+                print(f"Error loading default list from JSON: {e}")
+                # Fall back to database query if JSON fails
+                conn = get_supabase_connection()
+                cursor = conn.cursor()
+                
+                # Get items from default list
+                cursor.execute("""
+                    SELECT di.ticker, di.item_name, di.logo_url, di.default_list_id
+                    FROM default_list_items di
+                    WHERE di.default_list_id = %s
+                    ORDER BY di.added_at
+                """, (watchlist_id,))
+                items = cursor.fetchall()
+                
+                # Get the default list name
+                cursor.execute("""
+                    SELECT default_list_name
+                    FROM default_lists
+                    WHERE default_list_id = %s
+                """, (watchlist_id,))
+                list_name = cursor.fetchone()[0]
+                
+                # Get current prices for each stock
+                watchlist_items = []
+                for item in items:
+                    quote_data = fetch_finnhub_quote(item[0])
+                    if quote_data:
+                        watchlist_items.append({
+                            'symbol': item[0],
+                            'name': item[1],
+                            'price': quote_data['c'],
+                            'change': quote_data['d'],
+                            'changePercent': quote_data['dp'],
+                            'isPositive': quote_data['d'] >= 0,
+                            'logoUrl': item[2]
+                        })
+                
+                conn.close()
+                
+                response_data = {
+                    'watchlist_name': list_name,
+                    'items': watchlist_items
+                }
+                
+                # Cache the response
+                set_cached_watchlist(watchlist_id, response_data)
+                return jsonify(response_data)
         else:
             # Verify the watchlist belongs to the current user
+            conn = get_supabase_connection()
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT w.watchlist_id, w.watchlist_name 
                 FROM watchlist w 
@@ -943,9 +982,38 @@ def get_watchlist_items(watchlist_id):
             # Cache the response
             set_cached_watchlist(watchlist_id, response_data)
             return jsonify(response_data)
-            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/static/default-lists')
+def get_static_default_lists():
+    """Serve the static default lists metadata directly from the JSON file."""
+    try:
+        with open(DEFAULT_LISTS_META_JSON, 'r') as f:
+            default_lists = json.load(f)
+            return jsonify(default_lists)
+    except Exception as e:
+        return jsonify({
+            'error': f'Error loading default lists: {str(e)}',
+            'fallback_lists': [
+                {"watchlist_id": "default-stocks", "watchlist_name": "Stocks", "is_default": True},
+                {"watchlist_id": "default-forex", "watchlist_name": "Forex", "is_default": True},
+                {"watchlist_id": "default-global", "watchlist_name": "Global Market", "is_default": True}
+            ]
+        }), 500
+
+@app.route('/api/static/default-list/<watchlist_id>')
+def get_static_default_list(watchlist_id):
+    """Serve a specific static default list directly from the JSON file without live prices."""
+    try:
+        with open(DEFAULT_LISTS_JSON, 'r') as f:
+            default_lists = json.load(f)
+            if watchlist_id in default_lists:
+                return jsonify(default_lists[watchlist_id])
+            else:
+                return jsonify({'error': 'Default list not found'}), 404
+    except Exception as e:
+        return jsonify({'error': f'Error loading default list: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -391,67 +391,175 @@
             } catch (error) {
                 console.error('Error loading watchlist:', error);
                 
-                // Use fallback data if the request failed
-                const fallbackStocks = window.fallbackStocks;
-                
-                console.log('Using fallback stock data due to API error');
-                
-                // Update the stock list with fallback data
-                const stockList = document.getElementById('stock-list');
-                if (stockList) {
-                    stockList.innerHTML = ''; // Clear the list
-                    
-                    fallbackStocks.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
-                        div.setAttribute('data-symbol', item.symbol);
+                // Try to load from static JSON file instead
+                try {
+                    console.log('Attempting to load from static JSON file');
+                    if (watchlistId.startsWith('default-')) {
+                        const staticResponse = await fetch(`/api/static/default-list/${watchlistId}`);
+                        const staticData = await staticResponse.json();
                         
-                        div.innerHTML = `
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 flex-shrink-0">
-                                        <img src="${item.logoUrl}" alt="${item.name} logo" class="w-full h-full object-contain">
-                                    </div>
-                                    <div>
-                                        <div class="font-medium">${item.name}</div>
-                                        <div class="text-sm text-gray-400">${item.symbol}</div>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="font-semibold">$${item.price.toFixed(2)}</div>
-                                    <div class="text-xs ${item.isPositive ? 'text-positive' : 'text-negative'}">
-                                        ${item.isPositive ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent.toFixed(2)}%)
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        // Update the search input placeholder
+                        const searchInput = document.getElementById('stock-search');
+                        if (searchInput) {
+                            searchInput.placeholder = `Search in ${staticData.watchlist_name}...`;
+                        }
                         
-                        div.addEventListener('click', () => {
-                            // Remove active class from all items
-                            document.querySelectorAll('#stock-list > div').forEach(item => {
-                                item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                        // Update the stock list with static data (no live prices)
+                        const stockList = document.getElementById('stock-list');
+                        if (stockList && staticData.items) {
+                            stockList.innerHTML = ''; // Clear the list
+                            
+                            // Get cached price data or use placeholder values
+                            staticData.items.forEach(item => {
+                                // Add placeholder price data
+                                const itemWithPrice = {
+                                    ...item,
+                                    price: 0.00,  // Placeholder
+                                    change: 0.00, // Placeholder
+                                    changePercent: 0.00, // Placeholder
+                                    isPositive: true // Default
+                                };
+                                
+                                const div = document.createElement('div');
+                                div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                                div.setAttribute('data-symbol', item.symbol);
+                                
+                                div.innerHTML = `
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 flex-shrink-0">
+                                                <img src="${item.logoUrl}" alt="${item.name} logo" class="w-full h-full object-contain">
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">${item.name}</div>
+                                                <div class="text-sm text-gray-400">${item.symbol}</div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-semibold">Loading...</div>
+                                            <div class="text-xs">Loading price data...</div>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                div.addEventListener('click', () => {
+                                    // Remove active class from all items
+                                    document.querySelectorAll('#stock-list > div').forEach(item => {
+                                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                                    });
+                                    
+                                    // Add active class to clicked item
+                                    div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                                    
+                                    // Show stock details
+                                    showStockDetail(itemWithPrice);
+                                });
+                                
+                                stockList.appendChild(div);
+                                
+                                // Try to fetch live price data for each item
+                                fetch(`/api/stock/${item.symbol}`)
+                                    .then(response => response.json())
+                                    .then(quoteData => {
+                                        if (!quoteData.error && quoteData['Global Quote']) {
+                                            const quote = quoteData['Global Quote'];
+                                            const price = parseFloat(quote['05. price']);
+                                            const change = parseFloat(quote['09. change']);
+                                            const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
+                                            
+                                            // Update the price display
+                                            const priceDiv = div.querySelector('.text-right');
+                                            if (priceDiv) {
+                                                priceDiv.innerHTML = `
+                                                    <div class="font-semibold">$${price.toFixed(2)}</div>
+                                                    <div class="text-xs ${change >= 0 ? 'text-positive' : 'text-negative'}">
+                                                        ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent.toFixed(2)}%)
+                                                    </div>
+                                                `;
+                                            }
+                                            
+                                            // Update the item data for detail view
+                                            itemWithPrice.price = price;
+                                            itemWithPrice.change = change;
+                                            itemWithPrice.changePercent = changePercent;
+                                            itemWithPrice.isPositive = change >= 0;
+                                        }
+                                    })
+                                    .catch(err => console.error(`Error fetching price for ${item.symbol}:`, err));
                             });
                             
-                            // Add active class to clicked item
-                            div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                            return; // Exit after successfully showing static data
+                        }
+                    }
+                    
+                    // If we got here, loading from static file also failed, use fallback data
+                    throw new Error('Could not load from static JSON file');
+                    
+                } catch (staticError) {
+                    console.error('Error loading from static JSON:', staticError);
+                    
+                    // Use fallback data if all requests failed
+                    const fallbackStocks = window.fallbackStocks;
+                    
+                    console.log('Using hardcoded fallback stock data');
+                    
+                    // Update the stock list with fallback data
+                    const stockList = document.getElementById('stock-list');
+                    if (stockList) {
+                        stockList.innerHTML = ''; // Clear the list
+                        
+                        fallbackStocks.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                            div.setAttribute('data-symbol', item.symbol);
                             
-                            // Show stock details
-                            showStockDetail(item);
+                            div.innerHTML = `
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 flex-shrink-0">
+                                            <img src="${item.logoUrl}" alt="${item.name} logo" class="w-full h-full object-contain">
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">${item.name}</div>
+                                            <div class="text-sm text-gray-400">${item.symbol}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold">$${item.price.toFixed(2)}</div>
+                                        <div class="text-xs ${item.isPositive ? 'text-positive' : 'text-negative'}">
+                                            ${item.isPositive ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent.toFixed(2)}%)
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            div.addEventListener('click', () => {
+                                // Remove active class from all items
+                                document.querySelectorAll('#stock-list > div').forEach(item => {
+                                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                                });
+                                
+                                // Add active class to clicked item
+                                div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                                
+                                // Show stock details
+                                showStockDetail(item);
+                            });
+                            
+                            stockList.appendChild(div);
                         });
                         
-                        stockList.appendChild(div);
-                    });
-                    
-                    // Show the first stock by default
-                    if (fallbackStocks.length > 0) {
-                        showStockDetail(fallbackStocks[0]);
+                        // Show the first stock by default
+                        if (fallbackStocks.length > 0) {
+                            showStockDetail(fallbackStocks[0]);
+                        }
                     }
-                }
-                
-                // Update search input placeholder
-                const searchInput = document.getElementById('stock-search');
-                if (searchInput) {
-                    searchInput.placeholder = 'Search in Stocks...';
+                    
+                    // Update search input placeholder
+                    const searchInput = document.getElementById('stock-search');
+                    if (searchInput) {
+                        searchInput.placeholder = 'Search in Stocks...';
+                    }
                 }
             }
         }
@@ -557,6 +665,60 @@
             }
         } catch (error) {
             console.error('Error loading watchlists:', error);
+            
+            // Try to load static default lists
+            try {
+                const staticResponse = await fetch('/api/static/default-lists');
+                const staticWatchlists = await staticResponse.json();
+                
+                console.log('Loaded static default lists:', staticWatchlists);
+                
+                // Create watchlist navigation with static data
+                const watchlistNav = document.getElementById('watchlist-nav');
+                if (watchlistNav) {
+                    watchlistNav.innerHTML = '';
+                    
+                    staticWatchlists.forEach(watchlist => {
+                        const link = document.createElement('a');
+                        link.href = `/dashboard?list=${watchlist.watchlist_id}`;
+                        link.className = 'flex items-center space-x-2 text-sm font-medium text-gray-400 hover:text-gray-900 dark:hover:text-white whitespace-nowrap';
+                        
+                        link.innerHTML = `
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <span>${watchlist.watchlist_name}</span>
+                        `;
+                        
+                        // Add click event listener
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            loadWatchlistItems(watchlist.watchlist_id);
+                            
+                            // Update active state
+                            document.querySelectorAll('#watchlist-nav a').forEach(l => {
+                                l.classList.remove('text-primary');
+                            });
+                            link.classList.add('text-primary');
+                        });
+                        
+                        watchlistNav.appendChild(link);
+                    });
+                    
+                    // Load first watchlist by default
+                    if (staticWatchlists.length > 0) {
+                        loadWatchlistItems(staticWatchlists[0].watchlist_id);
+                        const firstLink = watchlistNav.querySelector('a');
+                        if (firstLink) {
+                            firstLink.classList.add('text-primary');
+                        }
+                    }
+                    
+                    return; // Exit if static lists loaded successfully
+                }
+            } catch (staticError) {
+                console.error('Error loading static default lists:', staticError);
+            }
             
             // Fallback watchlists
             const fallbackWatchlists = window.fallbackWatchlists;
