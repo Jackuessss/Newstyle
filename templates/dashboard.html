@@ -152,7 +152,7 @@
                     </div>
                     <div class="text-lg font-semibold">£<span id="balance">0.00</span></div>
                 </div>
-                
+
                 <!-- Center navigation -->
                 <nav class="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-8">
                     <a href="#" class="nav-link text-gray-400 hover:text-gray-900 dark:hover:text-white">
@@ -169,7 +169,7 @@
                         <div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700"></div>
                     </a>
                 </nav>
-                
+
                 <!-- Right side with theme toggle -->
                 <div class="flex items-center space-x-4">
                     <button id="theme-toggle" class="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
@@ -283,7 +283,7 @@
         async function loadWatchlistItems(watchlistId) {
             try {
                 console.log('Loading watchlist items for:', watchlistId);
-                const response = await fetch(`/api/watchlist/${watchlistId}/items`);
+                const response = await fetch(`/api/watchlist/${watchlistId}`);
                 const data = await response.json();
                 console.log('Watchlist items data:', data);
                 
@@ -301,7 +301,7 @@
                 // Update the stock list
                 const stockList = document.getElementById('stock-list');
                 if (stockList) {
-                    stockList.innerHTML = '';
+                    stockList.innerHTML = ''; // Clear the list
                     
                     if (data.items && data.items.length > 0) {
                         data.items.forEach(item => {
@@ -471,5 +471,196 @@
         }
     });
     </script>
+
+    <script>
+        // Add direct event listener to search input once DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            const searchInput = document.getElementById('stock-search');
+            const searchResults = document.getElementById('search-results');
+            
+            // Initialize global array to store all loaded stocks for search
+            window.allStocks = [];
+            
+            // Function to collect stocks from the stock list
+            function collectStocks() {
+                const stockItems = document.querySelectorAll('#stock-list > div[data-symbol]');
+                window.allStocks = [];
+                
+                stockItems.forEach(item => {
+                    const symbol = item.getAttribute('data-symbol');
+                    const nameEl = item.querySelector('.font-medium');
+                    const priceEl = item.querySelector('.font-semibold');
+                    const changeEl = item.querySelector('.text-xs');
+                    const logoEl = item.querySelector('img');
+                    
+                    if (symbol && nameEl) {
+                        const isPositive = changeEl && changeEl.classList.contains('text-positive');
+                        const priceText = priceEl ? priceEl.textContent.replace('$', '') : '0.00';
+                        const changeText = changeEl ? changeEl.textContent.trim() : '+0.00 (0.00%)';
+                        
+                        // Extract change and changePercent from text like "+1.23 (4.56%)"
+                        let change = 0;
+                        let changePercent = 0;
+                        
+                        if (changeText) {
+                            const match = changeText.match(/([+-]?\d+\.\d+)\s+\(([+-]?\d+\.\d+)%\)/);
+                            if (match) {
+                                change = parseFloat(match[1]);
+                                changePercent = parseFloat(match[2]);
+                            }
+                        }
+                        
+                        window.allStocks.push({
+                            symbol: symbol,
+                            name: nameEl.textContent,
+                            price: parseFloat(priceText),
+                            change: change,
+                            changePercent: changePercent,
+                            isPositive: isPositive,
+                            logoUrl: logoEl ? logoEl.src : ''
+                        });
+                    }
+                });
+                
+                console.log('Collected stocks for search:', window.allStocks.length);
+            }
+            
+            // Watch for changes to the stock list
+            const stockList = document.getElementById('stock-list');
+            if (stockList) {
+                // Use MutationObserver to detect when stocks are loaded
+                const observer = new MutationObserver(function(mutations) {
+                    collectStocks();
+                });
+                
+                observer.observe(stockList, { childList: true, subtree: true });
+                
+                // Also collect on initial load
+                setTimeout(collectStocks, 1000);
+            }
+            
+            if (searchInput) {
+                console.log('Search input found, adding event listener');
+                
+                // Add a simple test click event to ensure JavaScript is working
+                searchInput.addEventListener('click', function() {
+                    console.log('Search input clicked');
+                });
+                
+                let searchTimeout;
+                searchInput.addEventListener('input', function(e) {
+                    console.log('Search input event fired:', e.target.value);
+                    clearTimeout(searchTimeout);
+                    
+                    const query = e.target.value.trim();
+                    if (query.length < 2) {
+                        if (searchResults) searchResults.classList.add('hidden');
+                        return;
+                    }
+                    
+                    searchTimeout = setTimeout(() => {
+                        if (searchResults) {
+                            // Search in the collected stocks
+                            const results = searchStocks(query);
+                            
+                            if (results.length === 0) {
+                                searchResults.innerHTML = '<div class="p-4 text-gray-500">No results found</div>';
+                            } else {
+                                searchResults.innerHTML = results.map(stock => `
+                                    <div class="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0" onclick="selectStock('${stock.symbol}')">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 flex-shrink-0">
+                                                    <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium">${stock.name}</div>
+                                                    <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-semibold">$${stock.price.toFixed(2)}</div>
+                                                <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                                    ${stock.isPositive ? '+' : ''}${stock.change.toFixed(2)} (${stock.changePercent.toFixed(2)}%)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('');
+                            }
+                            
+                            searchResults.classList.remove('hidden');
+                            console.log('Search results displayed:', results.length);
+                        } else {
+                            console.log('Search results element not found');
+                        }
+                    }, 300);
+                });
+                
+                // Close search results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (searchResults && !searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        searchResults.classList.add('hidden');
+                    }
+                });
+            } else {
+                console.error('Search input element not found!');
+                // List all input elements to help debug
+                const allInputs = document.querySelectorAll('input');
+                console.log('All input elements:', allInputs.length);
+                allInputs.forEach((input, i) => {
+                    console.log(`Input ${i}:`, input.id, input);
+                });
+            }
+            
+            // Function to search stocks
+            function searchStocks(query) {
+                if (!window.allStocks || window.allStocks.length === 0) {
+                    console.log('No stocks available for search');
+                    return [];
+                }
+                
+                const lowerQuery = query.toLowerCase();
+                return window.allStocks.filter(stock => 
+                    stock.symbol.toLowerCase().includes(lowerQuery) || 
+                    stock.name.toLowerCase().includes(lowerQuery)
+                );
+            }
+            
+            // Make the selectStock function available globally
+            window.selectStock = function(symbol) {
+                console.log('Selecting stock:', symbol);
+                const stockElement = document.querySelector(`#stock-list div[data-symbol="${symbol}"]`);
+                
+                if (stockElement) {
+                    // Programmatically trigger the click event on the stock element
+                    stockElement.click();
+                    
+                    // Also highlight it visually
+                    document.querySelectorAll('#stock-list > div').forEach(item => {
+                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                    });
+                    stockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                    
+                    // Scroll to the selected stock
+                    stockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    console.log('Stock element not found for symbol:', symbol);
+                    // You could implement a fallback here to show the stock even if it's not in the list
+                }
+                
+                // Hide search results
+                if (searchResults) {
+                    searchResults.classList.add('hidden');
+                }
+                
+                // Clear search input
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+            };
+        });
+    </script>
 </body>
-</html> 
+</html>

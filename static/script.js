@@ -1,210 +1,6 @@
         // Alpha Vantage API key
         const API_KEY = 'LA9DKLX13DQCKHV3'; // Replace with your Alpha Vantage API key
         
-        // Sample data for demo purposes
-        const defaultStocks = [
-            {
-                symbol: 'AAPL',
-                name: 'Apple Inc.',
-                price: 175.84,
-                change: 2.31,
-                changePercent: 1.33,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/apple.com',
-                isPositive: true
-            },
-            {
-                symbol: 'MSFT',
-                name: 'Microsoft Corporation',
-                price: 338.11,
-                change: 4.22,
-                changePercent: 1.26,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/microsoft.com',
-                isPositive: true
-            },
-            {
-                symbol: 'AMZN',
-                name: 'Amazon.com Inc.',
-                price: 145.24,
-                change: -1.12,
-                changePercent: -0.76,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/amazon.com',
-                isPositive: false
-            },
-            {
-                symbol: 'NVDA',
-                name: 'NVIDIA Corporation',
-                price: 495.22,
-                change: 12.45,
-                changePercent: 2.58,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/nvidia.com',
-                isPositive: true
-            },
-            {
-                symbol: 'GOOGL',
-                name: 'Alphabet Inc.',
-                price: 140.93,
-                change: 1.23,
-                changePercent: 0.88,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/google.com',
-                isPositive: true
-            },
-            {
-                symbol: 'TSLA',
-                name: 'Tesla Inc.',
-                price: 238.45,
-                change: -5.67,
-                changePercent: -2.32,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/tesla.com',
-                isPositive: false
-            },
-            {
-                symbol: 'META',
-                name: 'Meta Platforms Inc.',
-                price: 474.99,
-                change: 8.45,
-                changePercent: 1.81,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/meta.com',
-                isPositive: true
-            },
-            {
-                symbol: 'JPM',
-                name: 'JPMorgan Chase & Co.',
-                price: 172.34,
-                change: 1.23,
-                changePercent: 0.72,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/jpmorganchase.com',
-                isPositive: true
-            },
-            {
-                symbol: 'V',
-                name: 'Visa Inc.',
-                price: 277.18,
-                change: -2.45,
-                changePercent: -0.88,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/visa.com',
-                isPositive: false
-            },
-            {
-                symbol: 'WMT',
-                name: 'Walmart Inc.',
-                price: 155.23,
-                change: 0.89,
-                changePercent: 0.58,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/walmart.com',
-                isPositive: true
-            },
-            {
-                symbol: 'MA',
-                name: 'Mastercard Inc.',
-                price: 445.67,
-                change: 3.12,
-                changePercent: 0.70,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/mastercard.com',
-                isPositive: true
-            },
-            {
-                symbol: 'HD',
-                name: 'Home Depot Inc.',
-                price: 362.45,
-                change: -4.56,
-                changePercent: -1.24,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/homedepot.com',
-                isPositive: false
-            },
-            {
-                symbol: 'BAC',
-                name: 'Bank of America Corp.',
-                price: 33.45,
-                change: 0.23,
-                changePercent: 0.69,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/bankofamerica.com',
-                isPositive: true
-            },
-            {
-                symbol: 'PFE',
-                name: 'Pfizer Inc.',
-                price: 28.34,
-                change: -0.45,
-                changePercent: -1.56,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/pfizer.com',
-                isPositive: false
-            },
-            {
-                symbol: 'NFLX',
-                name: 'Netflix Inc.',
-                price: 585.67,
-                change: 12.34,
-                changePercent: 2.15,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/netflix.com',
-                isPositive: true
-            },
-            {
-                symbol: 'INTC',
-                name: 'Intel Corporation',
-                price: 43.12,
-                change: -1.23,
-                changePercent: -2.77,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/intel.com',
-                isPositive: false
-            },
-            {
-                symbol: 'CSCO',
-                name: 'Cisco Systems Inc.',
-                price: 49.34,
-                change: 0.67,
-                changePercent: 1.38,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/cisco.com',
-                isPositive: true
-            },
-            {
-                symbol: 'PEP',
-                name: 'PepsiCo Inc.',
-                price: 167.89,
-                change: 1.45,
-                changePercent: 0.87,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/pepsi.com',
-                isPositive: true
-            },
-            {
-                symbol: 'ADBE',
-                name: 'Adobe Inc.',
-                price: 567.23,
-                change: -8.90,
-                changePercent: -1.54,
-                color: 'text-negative',
-                logoUrl: 'https://logo.clearbit.com/adobe.com',
-                isPositive: false
-            },
-            {
-                symbol: 'CMCSA',
-                name: 'Comcast Corporation',
-                price: 41.23,
-                change: 0.34,
-                changePercent: 0.83,
-                color: 'text-positive',
-                logoUrl: 'https://logo.clearbit.com/comcast.com',
-                isPositive: true
-            }
-        ];
-        
         // Initialize immediately when script loads
         document.addEventListener('DOMContentLoaded', async () => {
             // Fetch user balance
@@ -264,59 +60,84 @@
                 watchlistHeader.innerHTML = `<span id="watchlist-name">Stocks</span>`;
             }
             
-            // Initialize stock list with all default stocks
+            // Initialize stock list with database items
             const stockListEl = document.getElementById('stock-list');
+            // Global variable to store default stocks for search
+            window.defaultStocks = [];
+            
             if (stockListEl) {
                 stockListEl.innerHTML = ''; // Clear the list
-                defaultStocks.forEach(stock => {
-                    const div = document.createElement('div');
-                    div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
-                    div.setAttribute('data-symbol', stock.symbol);
+                // Fetch stocks from the database
+                try {
+                    const response = await fetch('/api/watchlist/default-stocks');
+                    const data = await response.json();
                     
-                    div.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 flex-shrink-0">
-                                    <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                    if (data.items && data.items.length > 0) {
+                        // Store default stocks globally for search
+                        window.defaultStocks = data.items;
+                        
+                        data.items.forEach(stock => {
+                            const div = document.createElement('div');
+                            div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                            div.setAttribute('data-symbol', stock.symbol);
+                            
+                            div.innerHTML = `
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 flex-shrink-0">
+                                            <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">${stock.name}</div>
+                                            <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                                        <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                            ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">${stock.name}</div>
-                                    <div class="text-sm text-gray-400">${stock.symbol}</div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-semibold">$${formatPrice(stock.price)}</div>
-                                <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
-                                    ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    div.addEventListener('click', () => {
-                        // Remove active class from all items
-                        document.querySelectorAll('#stock-list > div').forEach(item => {
-                            item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                            `;
+                            
+                            div.addEventListener('click', () => {
+                                // Remove active class from all items
+                                document.querySelectorAll('#stock-list > div').forEach(item => {
+                                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                                });
+                                
+                                // Add active class to clicked item
+                                div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                                
+                                // Show stock details
+                                showStockDetail(stock);
+                            });
+                            
+                            stockListEl.appendChild(div);
                         });
                         
-                        // Add active class to clicked item
-                        div.classList.add('bg-primary/10', 'dark:bg-primary/20');
-                        
-                        // Show stock details
-                        showStockDetail(stock);
-                    });
-                    
-                    stockListEl.appendChild(div);
-                });
+                        // Show the first stock as default
+                        if (data.items.length > 0) {
+                            showStockDetail(data.items[0]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching stocks:', error);
+                }
             }
             
-            // Search functionality
+            // Initialize search functionality
+            console.log('Setting up search functionality');
             const searchInput = document.getElementById('stock-search');
             const searchResults = document.getElementById('search-results');
-            let searchTimeout;
-
+            
             if (searchInput && searchResults) {
+                console.log('Search elements found, attaching event listeners');
+                let searchTimeout;
+                
                 searchInput.addEventListener('input', (e) => {
+                    console.log('Search input event triggered');
                     clearTimeout(searchTimeout);
                     const query = e.target.value.trim();
                     
@@ -326,8 +147,70 @@
                     }
 
                     searchTimeout = setTimeout(async () => {
-                        const results = await searchStocks(query);
-                        displaySearchResults(results);
+                        try {
+                            // Show loading state
+                            searchResults.innerHTML = `
+                                <div class="p-4 text-gray-500">
+                                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary inline-block mr-2"></div>
+                                    Searching...
+                                </div>
+                            `;
+                            searchResults.classList.remove('hidden');
+                            console.log('Searching for:', query);
+
+                            // Convert query to lowercase for case-insensitive search
+                            const searchQuery = query.toLowerCase();
+                            
+                            // Filter through default stocks
+                            const results = window.defaultStocks.filter(stock => {
+                                // Search in both symbol and name
+                                return stock.symbol.toLowerCase().includes(searchQuery) ||
+                                      stock.name.toLowerCase().includes(searchQuery);
+                            });
+                            
+                            console.log('Search results:', results.length, 'matches found');
+                            
+                            if (results.length === 0) {
+                                searchResults.innerHTML = '<div class="p-4 text-gray-500">No results found</div>';
+                            } else {
+                                searchResults.innerHTML = results.map(stock => `
+                                    <div class="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0" onclick="selectStock('${stock.symbol}')">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <div class="w-8 h-8 flex-shrink-0">
+                                                    <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                                </div>
+                                                <div>
+                                                    <div class="font-medium">${stock.name}</div>
+                                                    <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                                                <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                                    ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('');
+                            }
+                            
+                            // Check if search results are visible
+                            setTimeout(() => {
+                                const computedStyle = window.getComputedStyle(searchResults);
+                                console.log('Search results computed display:', computedStyle.display);
+                                console.log('Search results visible:', !searchResults.classList.contains('hidden'));
+                            }, 100);
+                            
+                        } catch (error) {
+                            console.error('Error searching stocks:', error);
+                            searchResults.innerHTML = `
+                                <div class="p-4 text-red-500">
+                                    Error searching stocks. Please try again.
+                                </div>
+                            `;
+                        }
                     }, 300);
                 });
 
@@ -337,75 +220,49 @@
                         searchResults.classList.add('hidden');
                     }
                 });
+            } else {
+                console.error('Search elements not found:', {
+                    searchInput: !!searchInput,
+                    searchResults: !!searchResults
+                });
             }
             
-            // Show NVIDIA stock as default
-            const nvidiaStock = defaultStocks.find(stock => stock.symbol === 'NVDA');
-            if (nvidiaStock) {
-                showStockDetail(nvidiaStock);
-            }
-            
-            // Show NVIDIA stock details by default
-            const defaultStock = defaultStocks.find(stock => stock.symbol === 'NVDA');
-            if (defaultStock) {
-                showStockDetail(defaultStock);
+            // Make selectStock available globally
+            window.selectStock = function(symbol) {
+                console.log('Select stock called for:', symbol);
+                const searchInput = document.getElementById('stock-search');
+                const searchResults = document.getElementById('search-results');
+                const stockList = document.getElementById('stock-list');
                 
-                // Generate and show sample chart data
-                const chartData = generateChartData(30);
-                const trace = {
-                    x: chartData.map(d => d.x),
-                    open: chartData.map(d => d.o),
-                    high: chartData.map(d => d.h),
-                    low: chartData.map(d => d.l),
-                    close: chartData.map(d => d.c),
-                    type: 'candlestick',
-                    xaxis: 'x',
-                    yaxis: 'y',
-                    name: defaultStock.symbol,
-                    increasing: {
-                        line: { color: '#16c784' },
-                        fillcolor: '#16c784'
-                    },
-                    decreasing: {
-                        line: { color: '#ea3943' },
-                        fillcolor: '#ea3943'
-                    }
-                };
-
-                const layout = {
-                    template: 'plotly_dark',
-                    paper_bgcolor: 'rgba(0,0,0,0)',
-                    plot_bgcolor: 'rgba(0,0,0,0)',
-                    margin: { t: 10, b: 40, l: 40, r: 40 },
-                    xaxis: {
-                        rangeslider: { visible: false },
-                        color: 'rgba(156, 163, 175, 0.8)',
-                        showgrid: false,
-                        showticklabels: true,
-                        tickangle: -45,
-                        tickformat: '%Y-%m-%d'
-                    },
-                    yaxis: {
-                        color: 'rgba(156, 163, 175, 0.8)',
-                        side: 'right',
-                        showgrid: false,
-                        showticklabels: true
-                    },
-                    showlegend: false,
-                    height: 500
-                };
-
-                const config = {
-                    responsive: true,
-                    displayModeBar: false
-                };
-
-                const chartEl = document.getElementById('stock-chart');
-                if (chartEl) {
-                    Plotly.newPlot('stock-chart', [trace], layout, config);
+                if (searchResults) {
+                    searchResults.classList.add('hidden');
                 }
-            }
-
+                
+                // Find the stock in the default stocks list
+                const stock = window.defaultStocks.find(s => s.symbol === symbol);
+                if (stock) {
+                    console.log('Stock found:', stock);
+                    // Remove active class from all items in the stock list
+                    document.querySelectorAll('#stock-list > div').forEach(item => {
+                        item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                    });
+                    
+                    // Find and highlight the selected stock in the list
+                    const selectedStockElement = stockList.querySelector(`[data-symbol="${symbol}"]`);
+                    if (selectedStockElement) {
+                        selectedStockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                        // Scroll the selected stock into view
+                        selectedStockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    
+                    // Show stock details
+                    showStockDetail(stock);
+                } else {
+                    console.error('Stock not found:', symbol);
+                    showError('Stock not found');
+                }
+            };
+            
             // Load watchlist from server
             const { watchlist: initialWatchlist, watchlistId } = await loadWatchlist();
             watchlist = initialWatchlist;
@@ -688,6 +545,118 @@
                 // Placeholder for fullscreen functionality
                 console.log('Fullscreen toggle clicked');
             });
+
+            // Function to load watchlist items
+            async function loadWatchlistItems(watchlistId) {
+                const stockListEl = document.getElementById('stock-list');
+                if (!stockListEl) return;
+
+                // Show loading state
+                stockListEl.innerHTML = `
+                    <div class="flex items-center justify-center p-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch(`/api/watchlist/${watchlistId}`);
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        // Update watchlist name
+                        const watchlistNameEl = document.getElementById('watchlist-name');
+                        if (watchlistNameEl) {
+                            watchlistNameEl.textContent = data.watchlist_name;
+                        }
+
+                        // Clear and populate the list
+                        stockListEl.innerHTML = '';
+                        data.items.forEach(stock => {
+                            const div = document.createElement('div');
+                            div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                            div.setAttribute('data-symbol', stock.symbol);
+                            
+                            div.innerHTML = `
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 flex-shrink-0">
+                                            <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">${stock.name}</div>
+                                            <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                                        <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                            ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            div.addEventListener('click', () => {
+                                // Remove active class from all items
+                                document.querySelectorAll('#stock-list > div').forEach(item => {
+                                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                                });
+                                
+                                // Add active class to clicked item
+                                div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                                
+                                // Show stock details
+                                showStockDetail(stock);
+                            });
+                            
+                            stockListEl.appendChild(div);
+                        });
+                        
+                        // Show the first stock as default
+                        if (data.items.length > 0) {
+                            showStockDetail(data.items[0]);
+                        }
+                    } else {
+                        stockListEl.innerHTML = `
+                            <div class="p-8 text-center text-gray-500">
+                                No items in this watchlist
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error loading watchlist:', error);
+                    stockListEl.innerHTML = `
+                        <div class="p-8 text-center text-red-500">
+                            Error loading watchlist. Please try again.
+                        </div>
+                    `;
+                }
+            }
+
+            // Function to switch between watchlists
+            async function switchWatchlist(watchlistId) {
+                // Show loading state in the list
+                await loadWatchlistItems(watchlistId);
+            }
+
+            // Add event listeners for watchlist navigation
+            document.addEventListener('DOMContentLoaded', () => {
+                const watchlistLinks = document.querySelectorAll('.watchlist-link');
+                watchlistLinks.forEach(link => {
+                    link.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const watchlistId = link.getAttribute('data-watchlist-id');
+                        
+                        // Remove active class from all links
+                        watchlistLinks.forEach(l => l.classList.remove('text-primary'));
+                        // Add active class to clicked link
+                        link.classList.add('text-primary');
+                        
+                        // Load the selected watchlist
+                        await switchWatchlist(watchlistId);
+                    });
+                });
+            });
         });
         
         /**
@@ -816,106 +785,71 @@
             }
         }
         
-        // Function to search for stocks
-        async function searchStocks(query) {
+        // Function to add a stock to the list
+        async function addStockToList(symbol) {
             try {
-                // Convert query to lowercase for case-insensitive search
-                const searchQuery = query.toLowerCase();
+                const response = await fetch(`/api/search?q=${encodeURIComponent(symbol)}`);
+                const data = await response.json();
                 
-                // Filter through default stocks
-                const results = defaultStocks.filter(stock => {
-                    // Search in both symbol and name
-                    return stock.symbol.toLowerCase().includes(searchQuery) ||
-                           stock.name.toLowerCase().includes(searchQuery);
-                });
-                
-                // Map the results to match the expected format
-                return results.map(stock => ({
-                    symbol: stock.symbol,
-                    name: stock.name,
-                    price: stock.price,
-                    change: stock.change,
-                    changePercent: stock.changePercent,
-                    type: 'stock',
-                    currency: 'USD',
-                    exchange: 'US',
-                    isPositive: stock.isPositive,
-                    logoUrl: stock.logoUrl
-                }));
-            } catch (error) {
-                console.error('Error searching stocks:', error);
-                return [];
-            }
-        }
-
-        function displaySearchResults(results) {
-            const searchResults = document.getElementById('search-results');
-            if (!searchResults) return;
-
-            if (results.length === 0) {
-                searchResults.innerHTML = '<div class="p-4 text-gray-500">No results found</div>';
-                searchResults.classList.remove('hidden');
-                return;
-            }
-
-            searchResults.innerHTML = results.map(stock => `
-                <div class="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0" onclick="selectStock('${stock.symbol}')">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 flex-shrink-0">
-                                <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
-                            </div>
-                            <div>
-                                <div class="font-medium">${stock.name}</div>
-                                <div class="text-sm text-gray-400">${stock.symbol}</div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="font-semibold">$${formatPrice(stock.price)}</div>
-                            <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
-                                ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            searchResults.classList.remove('hidden');
-        }
-
-        function selectStock(symbol) {
-            const searchInput = document.getElementById('stock-search');
-            const searchResults = document.getElementById('search-results');
-            const stockList = document.getElementById('stock-list');
-            
-            if (searchInput) {
-                searchInput.value = symbol;
-            }
-            
-            if (searchResults) {
-                searchResults.classList.add('hidden');
-            }
-            
-            // Find the stock in the default stocks list
-            const stock = defaultStocks.find(s => s.symbol === symbol);
-            if (stock) {
-                // Remove active class from all items in the stock list
-                document.querySelectorAll('#stock-list > div').forEach(item => {
-                    item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
-                });
-                
-                // Find and highlight the selected stock in the list
-                const selectedStockElement = stockList.querySelector(`[data-symbol="${symbol}"]`);
-                if (selectedStockElement) {
-                    selectedStockElement.classList.add('bg-primary/10', 'dark:bg-primary/20');
-                    // Scroll the selected stock into view
-                    selectedStockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (data.error) {
+                    showError(data.error);
+                    return;
                 }
                 
-                // Show stock details
-                showStockDetail(stock);
-            } else {
-                showError('Stock not found');
+                const stockData = data.result?.find(s => s.symbol === symbol);
+                if (!stockData) {
+                    showError('Stock not found');
+                    return;
+                }
+                
+                // Add to the list
+                const stockList = document.getElementById('stock-list');
+                if (stockList) {
+                    const div = document.createElement('div');
+                    div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                    div.setAttribute('data-symbol', stockData.symbol);
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 flex-shrink-0">
+                                    <img src="${stockData.logoUrl}" alt="${stockData.name} logo" class="w-full h-full object-contain">
+                                </div>
+                                <div>
+                                    <div class="font-medium">${stockData.name}</div>
+                                    <div class="text-sm text-gray-400">${stockData.symbol}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold">$${formatPrice(stockData.price)}</div>
+                                <div class="text-xs ${stockData.isPositive ? 'text-positive' : 'text-negative'}">
+                                    ${stockData.isPositive ? '+' : ''}${formatPrice(stockData.change)} (${stockData.isPositive ? '+' : ''}${formatPrice(stockData.changePercent)}%)
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    div.addEventListener('click', () => {
+                        // Remove active class from all items
+                        document.querySelectorAll('#stock-list > div').forEach(item => {
+                            item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                        });
+                        
+                        // Add active class to clicked item
+                        div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                        
+                        // Show stock details
+                        showStockDetail(stockData);
+                    });
+                    
+                    stockList.appendChild(div);
+                    
+                    // Show the newly added stock
+                    showStockDetail(stockData);
+                }
+            } catch (error) {
+                console.error('Error adding stock to list:', error);
+                showError('Failed to add stock to list. Please try again.');
             }
         }
 
@@ -946,3 +880,115 @@
             // Update chart
             updateChart(stock.symbol);
         }
+
+        // Function to load watchlist items
+        async function loadWatchlistItems(watchlistId) {
+            const stockListEl = document.getElementById('stock-list');
+            if (!stockListEl) return;
+
+            // Show loading state
+            stockListEl.innerHTML = `
+                <div class="flex items-center justify-center p-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/api/watchlist/${watchlistId}`);
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    // Update watchlist name
+                    const watchlistNameEl = document.getElementById('watchlist-name');
+                    if (watchlistNameEl) {
+                        watchlistNameEl.textContent = data.watchlist_name;
+                    }
+
+                    // Clear and populate the list
+                    stockListEl.innerHTML = '';
+                    data.items.forEach(stock => {
+                        const div = document.createElement('div');
+                        div.className = 'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 border-b dark:border-gray-700 border-gray-200';
+                        div.setAttribute('data-symbol', stock.symbol);
+                        
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 flex-shrink-0">
+                                        <img src="${stock.logoUrl}" alt="${stock.name} logo" class="w-full h-full object-contain">
+                                    </div>
+                                    <div>
+                                        <div class="font-medium">${stock.name}</div>
+                                        <div class="text-sm text-gray-400">${stock.symbol}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-semibold">$${formatPrice(stock.price)}</div>
+                                    <div class="text-xs ${stock.isPositive ? 'text-positive' : 'text-negative'}">
+                                        ${stock.isPositive ? '+' : ''}${formatPrice(stock.change)} (${stock.isPositive ? '+' : ''}${formatPrice(stock.changePercent)}%)
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        div.addEventListener('click', () => {
+                            // Remove active class from all items
+                            document.querySelectorAll('#stock-list > div').forEach(item => {
+                                item.classList.remove('bg-primary/10', 'dark:bg-primary/20');
+                            });
+                            
+                            // Add active class to clicked item
+                            div.classList.add('bg-primary/10', 'dark:bg-primary/20');
+                            
+                            // Show stock details
+                            showStockDetail(stock);
+                        });
+                        
+                        stockListEl.appendChild(div);
+                    });
+                    
+                    // Show the first stock as default
+                    if (data.items.length > 0) {
+                        showStockDetail(data.items[0]);
+                    }
+                } else {
+                    stockListEl.innerHTML = `
+                        <div class="p-8 text-center text-gray-500">
+                            No items in this watchlist
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading watchlist:', error);
+                stockListEl.innerHTML = `
+                    <div class="p-8 text-center text-red-500">
+                        Error loading watchlist. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        // Function to switch between watchlists
+        async function switchWatchlist(watchlistId) {
+            // Show loading state in the list
+            await loadWatchlistItems(watchlistId);
+        }
+
+        // Add event listeners for watchlist navigation
+        document.addEventListener('DOMContentLoaded', () => {
+            const watchlistLinks = document.querySelectorAll('.watchlist-link');
+            watchlistLinks.forEach(link => {
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const watchlistId = link.getAttribute('data-watchlist-id');
+                    
+                    // Remove active class from all links
+                    watchlistLinks.forEach(l => l.classList.remove('text-primary'));
+                    // Add active class to clicked link
+                    link.classList.add('text-primary');
+                    
+                    // Load the selected watchlist
+                    await switchWatchlist(watchlistId);
+                });
+            });
+        });

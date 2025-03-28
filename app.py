@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 from psycopg2.extras import RealDictCursor
+import time
 
 # Load environment variables
 load_dotenv()
@@ -47,7 +48,7 @@ def load_user(user_id):
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo')
 
 # Get Finnhub API key from environment variable
-FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', 'demo')
+FINNHUB_API_KEY = 'cvia941r01qks9q9977gcvia941r01qks9q99780'
 
 # Supabase configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -62,6 +63,67 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"Warning: Failed to initialize Supabase client: {e}")
         supabase = None
+
+# Cache for stock quotes
+stock_quote_cache = {}
+CACHE_DURATION = 60  # Cache duration in seconds
+RATE_LIMIT_DELAY = 0.5  # Delay between API calls in seconds
+
+# Cache for watchlist items
+watchlist_cache = {}
+WATCHLIST_CACHE_DURATION = 30  # Cache duration in seconds
+
+def get_cached_quote(symbol):
+    if symbol in stock_quote_cache:
+        cached_data, timestamp = stock_quote_cache[symbol]
+        if time.time() - timestamp < CACHE_DURATION:
+            return cached_data
+    return None
+
+def set_cached_quote(symbol, data):
+    stock_quote_cache[symbol] = (data, time.time())
+
+def get_cached_watchlist(watchlist_id):
+    if watchlist_id in watchlist_cache:
+        cached_data, timestamp = watchlist_cache[watchlist_id]
+        if time.time() - timestamp < WATCHLIST_CACHE_DURATION:
+            return cached_data
+    return None
+
+def set_cached_watchlist(watchlist_id, data):
+    watchlist_cache[watchlist_id] = (data, time.time())
+
+def fetch_finnhub_quote(symbol):
+    try:
+        # Check cache first
+        cached_data = get_cached_quote(symbol)
+        if cached_data:
+            return cached_data
+
+        # Add delay to respect rate limits
+        time.sleep(RATE_LIMIT_DELAY)
+
+        # Get current quote from Finnhub
+        quote_url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={FINNHUB_API_KEY}"
+        quote_response = requests.get(quote_url)
+        
+        if quote_response.status_code == 429:
+            print(f"Rate limit hit for {symbol}, waiting before retry...")
+            time.sleep(2)  # Wait longer on rate limit
+            quote_response = requests.get(quote_url)
+            
+        quote_response.raise_for_status()
+        quote_data = quote_response.json()
+        
+        if quote_data and quote_data.get('c'):  # If we have current price
+            # Cache the successful response
+            set_cached_quote(symbol, quote_data)
+            return quote_data
+            
+        return None
+    except Exception as e:
+        print(f"Error fetching quote for {symbol}: {str(e)}")
+        return None
 
 @app.route('/index')
 def trade():
@@ -129,41 +191,48 @@ def search_stocks():
         return jsonify({'error': 'No search query provided'})
     
     try:
-        # Finnhub API endpoint for symbol search
-        url = f"https://finnhub.io/api/v1/search?q={query}&token={FINNHUB_API_KEY}"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
+        conn = get_supabase_connection()
+        cursor = conn.cursor()
         
-        if 'result' not in data:
-            return jsonify({'error': 'No results found'})
+        # Search in default_list_items table
+        cursor.execute("""
+            SELECT di.ticker, di.item_name, di.logo_url, di.default_list_id
+            FROM default_list_items di
+            WHERE LOWER(di.ticker) LIKE LOWER(%s) OR LOWER(di.item_name) LIKE LOWER(%s)
+            ORDER BY 
+                CASE 
+                    WHEN LOWER(di.ticker) = LOWER(%s) THEN 1
+                    WHEN LOWER(di.item_name) = LOWER(%s) THEN 2
+                    WHEN LOWER(di.ticker) LIKE LOWER(%s) THEN 3
+                    WHEN LOWER(di.item_name) LIKE LOWER(%s) THEN 4
+                    ELSE 5
+                END
+            LIMIT 10
+        """, (
+            f"%{query}%", f"%{query}%",  # For LIKE matches
+            query, query,  # For exact matches
+            f"{query}%", f"{query}%"  # For starts with matches
+        ))
+        items = cursor.fetchall()
         
-        # Get current prices for the search results
         results = []
-        for stock in data['result'][:10]:  # Limit to 10 results
-            try:
-                # Get current quote
-                quote_url = f"https://finnhub.io/api/v1/quote?symbol={stock['symbol']}&token={FINNHUB_API_KEY}"
-                quote_response = requests.get(quote_url)
-                quote_response.raise_for_status()
-                quote_data = quote_response.json()
-                
-                if quote_data and quote_data.get('c'):  # If we have current price
-                    results.append({
-                        'symbol': stock['symbol'],
-                        'description': stock['description'],
-                        'price': quote_data['c'],
-                        'change': quote_data['d'],
-                        'changePercent': quote_data['dp']
-                    })
-            except Exception as e:
-                print(f"Error fetching quote for {stock['symbol']}: {str(e)}")
-                continue
+        for item in items:
+            # Get current quote for the stock
+            quote_data = fetch_finnhub_quote(item[0])
+            if quote_data:
+                results.append({
+                    'symbol': item[0],
+                    'name': item[1],
+                    'price': quote_data['c'],
+                    'change': quote_data['d'],
+                    'changePercent': quote_data['dp'],
+                    'isPositive': quote_data['d'] >= 0,
+                    'logoUrl': item[2]
+                })
         
+        conn.close()
         return jsonify({'result': results})
         
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'API request failed: {str(e)}'})
     except Exception as e:
         return jsonify({'error': f'An error occurred: {str(e)}'})
 
@@ -207,31 +276,28 @@ def get_supabase_connection():
 def init_supabase_db():
     conn = get_supabase_connection()
     cursor = conn.cursor()
+    
+    # Create users table
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
                         user_id TEXT PRIMARY KEY,
                         email TEXT UNIQUE NOT NULL,
-                        first_name TEXT NOT NULL,
-                        last_name TEXT NOT NULL,
                         password_hash TEXT NOT NULL,
-                        reset_code TEXT,
-                        terms BOOLEAN NOT NULL,
-                        balance DECIMAL(10,2) DEFAULT 0.00,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
     
+    # Create watchlist table
     cursor.execute('''CREATE TABLE IF NOT EXISTS watchlist (
                         watchlist_id TEXT PRIMARY KEY,
                         user_id TEXT NOT NULL,
                         watchlist_name TEXT NOT NULL,
-                        is_default BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users(user_id))''')
     
+    # Create watchlist_items table
     cursor.execute('''CREATE TABLE IF NOT EXISTS watchlist_items (
-                        watchlist_item_id TEXT PRIMARY KEY,
                         watchlist_id TEXT NOT NULL,
                         stock_symbol TEXT NOT NULL,
                         added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (watchlist_id, stock_symbol),
                         FOREIGN KEY (watchlist_id) REFERENCES watchlist(watchlist_id))''')
     
     # Create default_lists table
@@ -240,11 +306,16 @@ def init_supabase_db():
                         default_list_name TEXT NOT NULL,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
     
-    # Create default_list_items table
+    # Drop and recreate default_list_items table to ensure correct structure
+    cursor.execute('DROP TABLE IF EXISTS default_list_items')
+    
+    # Create default_list_items table with updated structure
     cursor.execute('''CREATE TABLE IF NOT EXISTS default_list_items (
                         default_list_item_id TEXT PRIMARY KEY,
                         default_list_id TEXT NOT NULL,
                         ticker TEXT NOT NULL,
+                        item_name TEXT NOT NULL,
+                        logo_url TEXT NOT NULL,
                         added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (default_list_id) REFERENCES default_lists(default_list_id))''')
     
@@ -262,21 +333,53 @@ def init_supabase_db():
             ON CONFLICT (default_list_id) DO NOTHING
         """, (list_id, list_name))
     
-    # Insert default items for each list
+    # Insert default items for each list with proper names and logos
     default_items = {
-        'default-stocks': ['TSLA', 'NVDA', 'MIGO', 'PLTR', 'MSTR', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 
-                          'AMD', 'INTC', 'TSM', 'ASML', 'AVGO', 'TXN', 'QCOM', 'MU', 'ADI', 'CRM'],
-        'default-forex': ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CAD', 'AUD/USD'],
-        'default-global': ['^GSPC', '^DJI', '^IXIC', '^FTSE', '^N225']
+        'default-stocks': [
+            ('TSLA', 'Tesla', 'https://logo.clearbit.com/tesla.com'),
+            ('NVDA', 'NVIDIA', 'https://logo.clearbit.com/nvidia.com'),
+            ('MIGO', 'MicroAlgo', 'https://logo.clearbit.com/microalgo.com'),
+            ('PLTR', 'Palantir Technologies', 'https://logo.clearbit.com/palantir.com'),
+            ('MSTR', 'MicroStrategy', 'https://logo.clearbit.com/microstrategy.com'),
+            ('AAPL', 'Apple Inc.', 'https://logo.clearbit.com/apple.com'),
+            ('MSFT', 'Microsoft Corporation', 'https://logo.clearbit.com/microsoft.com'),
+            ('GOOGL', 'Alphabet Inc.', 'https://logo.clearbit.com/google.com'),
+            ('AMZN', 'Amazon.com Inc.', 'https://logo.clearbit.com/amazon.com'),
+            ('META', 'Meta Platforms Inc.', 'https://logo.clearbit.com/meta.com'),
+            ('AMD', 'Advanced Micro Devices', 'https://logo.clearbit.com/amd.com'),
+            ('INTC', 'Intel Corporation', 'https://logo.clearbit.com/intel.com'),
+            ('TSM', 'Taiwan Semiconductor', 'https://logo.clearbit.com/tsmc.com'),
+            ('ASML', 'ASML Holding', 'https://logo.clearbit.com/asml.com'),
+            ('AVGO', 'Broadcom Inc.', 'https://logo.clearbit.com/broadcom.com'),
+            ('TXN', 'Texas Instruments', 'https://logo.clearbit.com/ti.com'),
+            ('QCOM', 'Qualcomm Inc.', 'https://logo.clearbit.com/qualcomm.com'),
+            ('MU', 'Micron Technology', 'https://logo.clearbit.com/micron.com'),
+            ('ADI', 'Analog Devices', 'https://logo.clearbit.com/analog.com'),
+            ('CRM', 'Salesforce Inc.', 'https://logo.clearbit.com/salesforce.com')
+        ],
+        'default-forex': [
+            ('EUR/USD', 'Euro/US Dollar', 'https://logo.clearbit.com/ecb.europa.eu'),
+            ('GBP/USD', 'British Pound/US Dollar', 'https://logo.clearbit.com/bankofengland.co.uk'),
+            ('USD/JPY', 'US Dollar/Japanese Yen', 'https://logo.clearbit.com/boj.or.jp'),
+            ('USD/CAD', 'US Dollar/Canadian Dollar', 'https://logo.clearbit.com/bankofcanada.ca'),
+            ('AUD/USD', 'Australian Dollar/US Dollar', 'https://logo.clearbit.com/rba.gov.au')
+        ],
+        'default-global': [
+            ('^GSPC', 'S&P 500', 'https://logo.clearbit.com/spglobal.com'),
+            ('^DJI', 'Dow Jones Industrial Average', 'https://logo.clearbit.com/spglobal.com'),
+            ('^IXIC', 'NASDAQ Composite', 'https://logo.clearbit.com/nasdaq.com'),
+            ('^FTSE', 'FTSE 100', 'https://logo.clearbit.com/lseg.com'),
+            ('^N225', 'Nikkei 225', 'https://logo.clearbit.com/jpx.co.jp')
+        ]
     }
     
-    for list_id, tickers in default_items.items():
-        for ticker in tickers:
+    for list_id, items in default_items.items():
+        for ticker, name, logo_url in items:
             cursor.execute("""
-                INSERT INTO default_list_items (default_list_item_id, default_list_id, ticker)
-                VALUES (%s, %s, %s)
+                INSERT INTO default_list_items (default_list_item_id, default_list_id, ticker, item_name, logo_url)
+                VALUES (%s, %s, %s, %s, %s)
                 ON CONFLICT (default_list_item_id) DO NOTHING
-            """, (f'{list_id}-{ticker}', list_id, ticker))
+            """, (f'{list_id}-{ticker}', list_id, ticker, name, logo_url))
     
     conn.commit()
     conn.close()
@@ -732,24 +835,60 @@ def get_user_watchlists(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/watchlist/<watchlist_id>/items')
-@login_required
+@app.route('/api/watchlist/<watchlist_id>')
 def get_watchlist_items(watchlist_id):
     try:
+        # Check cache first
+        cached_data = get_cached_watchlist(watchlist_id)
+        if cached_data:
+            return jsonify(cached_data)
+
         conn = get_supabase_connection()
         cursor = conn.cursor()
         
-        # Check if this is a default list
         if watchlist_id.startswith('default-'):
-            # Get default list items
+            # Get items from default list
             cursor.execute("""
-                SELECT dli.ticker, dl.default_list_name
-                FROM default_list_items dli
-                JOIN default_lists dl ON dli.default_list_id = dl.default_list_id
-                WHERE dl.default_list_id = %s
+                SELECT di.ticker, di.item_name, di.logo_url, di.default_list_id
+                FROM default_list_items di
+                WHERE di.default_list_id = %s
+                ORDER BY di.added_at
             """, (watchlist_id,))
             items = cursor.fetchall()
-            watchlist_name = items[0][1] if items else "Default List"
+            
+            # Get the default list name
+            cursor.execute("""
+                SELECT default_list_name
+                FROM default_lists
+                WHERE default_list_id = %s
+            """, (watchlist_id,))
+            list_name = cursor.fetchone()[0]
+            
+            # Get current prices for each stock
+            watchlist_items = []
+            for item in items:
+                quote_data = fetch_finnhub_quote(item[0])
+                if quote_data:
+                    watchlist_items.append({
+                        'symbol': item[0],
+                        'name': item[1],
+                        'price': quote_data['c'],
+                        'change': quote_data['d'],
+                        'changePercent': quote_data['dp'],
+                        'isPositive': quote_data['d'] >= 0,
+                        'logoUrl': item[2]
+                    })
+            
+            conn.close()
+            
+            response_data = {
+                'watchlist_name': list_name,
+                'items': watchlist_items
+            }
+            
+            # Cache the response
+            set_cached_watchlist(watchlist_id, response_data)
+            return jsonify(response_data)
         else:
             # Verify the watchlist belongs to the current user
             cursor.execute("""
@@ -770,80 +909,41 @@ def get_watchlist_items(watchlist_id):
             """, (watchlist_id,))
             items = cursor.fetchall()
             watchlist_name = watchlist[1]
-        
-        conn.close()
-        
-        if not items:
-            return jsonify({
-                'watchlist_name': watchlist_name,
-                'items': [],
-                'message': f"{watchlist_name} is empty"
-            })
             
-        # Demo data for the stocks
-        demo_data = {
-            'TSLA': {
-                'name': 'Tesla',
-                'price': 274.43,
-                'change': 25.06,
-                'changePercent': 10.05,
-                'color': '#E31937',
-                'logoUrl': 'https://i.imgur.com/ks33QCe.png',
-                'isPositive': True
-            },
-            'NVDA': {
-                'name': 'Nvidia',
-                'price': 121.92,
-                'change': 4.15,
-                'changePercent': 3.52,
-                'color': '#76B900',
-                'logoUrl': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFAkwq5rkkbUsQuJvSThsHS05SkYYejcUijA&s',
-                'isPositive': True
-            },
-            'MIGO': {
-                'name': 'MicroAlgo',
-                'price': 9.84,
-                'change': 7.34,
-                'changePercent': 293.60,
-                'color': '#FF0000',
-                'logoUrl': 'https://i.imgur.com/sCHHSNG.png',
-                'isPositive': True
-            },
-            'PLTR': {
-                'name': 'Palantir',
-                'price': 96.10,
-                'change': 5.10,
-                'changePercent': 5.60,
-                'color': '#000000',
-                'logoUrl': 'https://static.stocktitan.net/company-logo/pltr.png',
-                'isPositive': True
-            },
-            'MSTR': {
-                'name': 'MicroStrategy',
-                'price': 331.16,
-                'change': 11.87,
-                'changePercent': 3.72,
-                'color': '#CC0000',
-                'logoUrl': 'https://i.imgur.com/RG3TgEY.png',
-                'isPositive': True
+            # Get current prices for each stock
+            watchlist_items = []
+            for item in items:
+                quote_data = fetch_finnhub_quote(item[0])
+                if quote_data:
+                    cursor.execute("""
+                        SELECT item_name, logo_url
+                        FROM default_list_items
+                        WHERE ticker = %s
+                        LIMIT 1
+                    """, (item[0],))
+                    company_info = cursor.fetchone()
+                    
+                    watchlist_items.append({
+                        'symbol': item[0],
+                        'name': company_info[0] if company_info else item[0],
+                        'price': quote_data['c'],
+                        'change': quote_data['d'],
+                        'changePercent': quote_data['dp'],
+                        'isPositive': quote_data['d'] >= 0,
+                        'logoUrl': company_info[1] if company_info else f"https://logo.clearbit.com/{item[0].lower()}.com"
+                    })
+            
+            conn.close()
+            
+            response_data = {
+                'watchlist_name': watchlist_name,
+                'items': watchlist_items
             }
-        }
-        
-        # Get stock data for each symbol in the watchlist
-        watchlist_items = []
-        for item in items:
-            symbol = item[0] if watchlist_id.startswith('default-') else item[0]
-            if symbol in demo_data:
-                watchlist_items.append({
-                    'symbol': symbol,
-                    **demo_data[symbol]
-                })
-        
-        return jsonify({
-            'watchlist_name': watchlist_name,
-            'items': watchlist_items
-        })
-        
+            
+            # Cache the response
+            set_cached_watchlist(watchlist_id, response_data)
+            return jsonify(response_data)
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
