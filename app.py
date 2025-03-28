@@ -222,6 +222,7 @@ def init_supabase_db():
                         watchlist_id TEXT PRIMARY KEY,
                         user_id TEXT NOT NULL,
                         watchlist_name TEXT NOT NULL,
+                        is_default BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users(user_id))''')
@@ -232,6 +233,50 @@ def init_supabase_db():
                         stock_symbol TEXT NOT NULL,
                         added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (watchlist_id) REFERENCES watchlist(watchlist_id))''')
+    
+    # Create default_lists table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS default_lists (
+                        default_list_id TEXT PRIMARY KEY,
+                        default_list_name TEXT NOT NULL,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # Create default_list_items table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS default_list_items (
+                        default_list_item_id TEXT PRIMARY KEY,
+                        default_list_id TEXT NOT NULL,
+                        ticker TEXT NOT NULL,
+                        added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (default_list_id) REFERENCES default_lists(default_list_id))''')
+    
+    # Insert default lists if they don't exist
+    default_lists = [
+        ('default-stocks', 'Stocks'),
+        ('default-forex', 'Forex'),
+        ('default-global', 'Global Market')
+    ]
+    
+    for list_id, list_name in default_lists:
+        cursor.execute("""
+            INSERT INTO default_lists (default_list_id, default_list_name)
+            VALUES (%s, %s)
+            ON CONFLICT (default_list_id) DO NOTHING
+        """, (list_id, list_name))
+    
+    # Insert default items for each list
+    default_items = {
+        'default-stocks': ['TSLA', 'NVDA', 'MIGO', 'PLTR', 'MSTR', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 
+                          'AMD', 'INTC', 'TSM', 'ASML', 'AVGO', 'TXN', 'QCOM', 'MU', 'ADI', 'CRM'],
+        'default-forex': ['EUR/USD', 'GBP/USD', 'USD/JPY', 'USD/CAD', 'AUD/USD'],
+        'default-global': ['^GSPC', '^DJI', '^IXIC', '^FTSE', '^N225']
+    }
+    
+    for list_id, tickers in default_items.items():
+        for ticker in tickers:
+            cursor.execute("""
+                INSERT INTO default_list_items (default_list_item_id, default_list_id, ticker)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (default_list_item_id) DO NOTHING
+            """, (f'{list_id}-{ticker}', list_id, ticker))
     
     conn.commit()
     conn.close()
@@ -268,7 +313,7 @@ def signup_user(email, password, first_name, last_name, terms):
         VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (user_id, email, first_name, last_name, hashed_password, terms, current_timestamp))
     
-    # Create default watchlist for the user
+    # Create My Watchlist for the new user
     watchlist_id = str(uuid.uuid4())
     cursor.execute("""
         INSERT INTO watchlist (watchlist_id, user_id, watchlist_name, created_at, updated_at)
@@ -461,12 +506,8 @@ def forgotpasswordemail():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', user_id=current_user.id)
-
-@app.route('/stocks')
-@login_required
-def stocks():
-    return render_template('stocks.html', user_id=current_user.id)
+    list_type = request.args.get('list', 'my-watchlist')
+    return render_template('dashboard.html', user_id=current_user.id, list_type=list_type)
 
 @app.route('/homepage')
 def homepage():
@@ -644,23 +685,47 @@ def get_user_watchlists(user_id):
 
         conn = get_supabase_connection()
         cursor = conn.cursor()
+        
+        # Get user's personal watchlists
         cursor.execute("""
-            SELECT watchlist_id, watchlist_name, created_at, updated_at 
+            SELECT watchlist_id, watchlist_name, created_at, updated_at
             FROM watchlist 
             WHERE user_id = %s 
             ORDER BY created_at DESC
         """, (user_id,))
-        watchlists = cursor.fetchall()
+        user_watchlists = cursor.fetchall()
+        
+        # Get default lists from default_lists table
+        cursor.execute("""
+            SELECT default_list_id, default_list_name
+            FROM default_lists
+            ORDER BY default_list_id
+        """)
+        default_lists = cursor.fetchall()
+        
         conn.close()
 
         # Convert the results to a list of dictionaries
         watchlist_data = []
-        for watchlist in watchlists:
+        
+        # Add user's personal watchlists
+        for watchlist in user_watchlists:
             watchlist_data.append({
                 'watchlist_id': watchlist[0],
                 'watchlist_name': watchlist[1],
                 'created_at': watchlist[2].isoformat(),
-                'updated_at': watchlist[3].isoformat()
+                'updated_at': watchlist[3].isoformat(),
+                'is_default': False
+            })
+            
+        # Add default lists
+        for default_list in default_lists:
+            watchlist_data.append({
+                'watchlist_id': default_list[0],
+                'watchlist_name': default_list[1],
+                'created_at': datetime.utcnow().isoformat(),  # Use current time for default lists
+                'updated_at': datetime.utcnow().isoformat(),  # Use current time for default lists
+                'is_default': True
             })
 
         return jsonify(watchlist_data)
@@ -671,33 +736,48 @@ def get_user_watchlists(user_id):
 @login_required
 def get_watchlist_items(watchlist_id):
     try:
-        # First verify the watchlist belongs to the current user
         conn = get_supabase_connection()
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT w.watchlist_id, w.watchlist_name 
-            FROM watchlist w 
-            WHERE w.watchlist_id = %s AND w.user_id = %s
-        """, (watchlist_id, current_user.id))
-        watchlist = cursor.fetchone()
         
-        if not watchlist:
-            return jsonify({'error': 'Watchlist not found or unauthorized'}), 404
+        # Check if this is a default list
+        if watchlist_id.startswith('default-'):
+            # Get default list items
+            cursor.execute("""
+                SELECT dli.ticker, dl.default_list_name
+                FROM default_list_items dli
+                JOIN default_lists dl ON dli.default_list_id = dl.default_list_id
+                WHERE dl.default_list_id = %s
+            """, (watchlist_id,))
+            items = cursor.fetchall()
+            watchlist_name = items[0][1] if items else "Default List"
+        else:
+            # Verify the watchlist belongs to the current user
+            cursor.execute("""
+                SELECT w.watchlist_id, w.watchlist_name 
+                FROM watchlist w 
+                WHERE w.watchlist_id = %s AND w.user_id = %s
+            """, (watchlist_id, current_user.id))
+            watchlist = cursor.fetchone()
             
-        # Get all items in the watchlist
-        cursor.execute("""
-            SELECT stock_symbol 
-            FROM watchlist_items 
-            WHERE watchlist_id = %s
-        """, (watchlist_id,))
-        items = cursor.fetchall()
+            if not watchlist:
+                return jsonify({'error': 'Watchlist not found or unauthorized'}), 404
+                
+            # Get all items in the personal watchlist
+            cursor.execute("""
+                SELECT stock_symbol 
+                FROM watchlist_items 
+                WHERE watchlist_id = %s
+            """, (watchlist_id,))
+            items = cursor.fetchall()
+            watchlist_name = watchlist[1]
+        
         conn.close()
         
         if not items:
             return jsonify({
-                'watchlist_name': watchlist[1],
+                'watchlist_name': watchlist_name,
                 'items': [],
-                'message': f"{watchlist[1]} is empty"
+                'message': f"{watchlist_name} is empty"
             })
             
         # Demo data for the stocks
@@ -752,7 +832,7 @@ def get_watchlist_items(watchlist_id):
         # Get stock data for each symbol in the watchlist
         watchlist_items = []
         for item in items:
-            symbol = item[0]
+            symbol = item[0] if watchlist_id.startswith('default-') else item[0]
             if symbol in demo_data:
                 watchlist_items.append({
                     'symbol': symbol,
@@ -760,7 +840,7 @@ def get_watchlist_items(watchlist_id):
                 })
         
         return jsonify({
-            'watchlist_name': watchlist[1],
+            'watchlist_name': watchlist_name,
             'items': watchlist_items
         })
         
