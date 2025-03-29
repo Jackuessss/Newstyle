@@ -1,5 +1,6 @@
 # <p align="center">🐧 Penguin Trader</p>
 ### <p align="center">Empower your trading journey with seamless insight</p>
+#### <p align="center">This is a computer science A-level coursework project</p>
 
 ---
 
