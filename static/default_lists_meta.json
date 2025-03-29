@@ -10,6 +10,11 @@
     "is_default": true
   },
   {
+    "watchlist_id": "default-indices",
+    "watchlist_name": "Indices",
+    "is_default": true
+  },
+  {
     "watchlist_id": "default-global",
     "watchlist_name": "Global Market",
     "is_default": true
