@@ -3,9 +3,14 @@
 
 ---
 
-<p align="center" ![GitHub last commit](https://img.shields.io/github/last-commit/jackuessss/penguintrader)
-   ![GitHub language](https://img.shields.io/github/languages/top/jackuessss/penguintrader)
-   ![GitHub languages count](https://img.shields.io/github/languages/count/jackuessss/penguintrader) </p>   
+<p align="center">
+  <img src="https://img.shields.io/github/last-commit/jackuessss/penguintrader" />
+  <img src="https://img.shields.io/github/languages/top/jackuessss/penguintrader" />
+  <img src="https://img.shields.io/github/languages/count/jackuessss/penguintrader" />
+</p>
+![GitHub last commit](https://img.shields.io/github/last-commit/jackuessss/penguintrader)
+![GitHub language](https://img.shields.io/github/languages/top/jackuessss/penguintrader)
+![GitHub languages count](https://img.shields.io/github/languages/count/jackuessss/penguintrader)    
 
 ## 🛠 Built With
 
